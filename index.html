@@ -914,7 +914,7 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v2";
+    const storageKey = "noku-gantt-data-v3";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1520,6 +1520,47 @@
     function escapeAttr(value) {
       return escapeHtml(value).replace(/`/g, "&#096;");
     }
+
+    document.addEventListener("click", (event) => {
+      const contextDelete = event.target.closest("#contextMenu [data-context-action='delete']");
+      if (contextDelete && contextTaskId) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        deleteTask(contextTaskId);
+        return;
+      }
+
+      const taskDelete = event.target.closest("[data-delete-task]");
+      if (taskDelete) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        deleteTask(taskDelete.dataset.deleteTask);
+        return;
+      }
+
+      const projectDelete = event.target.closest("[data-delete-project]");
+      if (projectDelete) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        deleteProject(projectDelete.dataset.deleteProject);
+        return;
+      }
+
+      const memberDelete = event.target.closest("[data-delete-member]");
+      if (memberDelete) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        deleteMember(memberDelete.dataset.deleteMember);
+        return;
+      }
+
+      const statusDelete = event.target.closest("[data-delete-status]");
+      if (statusDelete) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        deleteStatus(statusDelete.dataset.deleteStatus);
+      }
+    }, true);
 
     document.getElementById("addTaskBtn").addEventListener("click", () => openTask());
     document.getElementById("settingsBtn").addEventListener("click", () => openModal("settingsModal"));
