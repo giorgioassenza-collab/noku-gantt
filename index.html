@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
   <script>
     (() => {
-      const appVersion = "v5";
+      const appVersion = "v6";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -927,8 +927,8 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v5";
-    const legacyStorageKeys = ["noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const storageKey = "noku-gantt-data-v6";
+    const legacyStorageKeys = ["noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1589,9 +1589,15 @@
       return escapeHtml(value).replace(/`/g, "&#096;");
     }
 
-    document.addEventListener("click", (event) => {
+    let lastActionSignature = "";
+
+    function runPrimaryButtonAction(event) {
       const contextButton = event.target.closest("#contextMenu [data-context-action]");
       if (contextButton && contextTaskId) {
+        const signature = `context:${contextButton.dataset.contextAction}:${contextTaskId}`;
+        if (lastActionSignature === signature) return;
+        lastActionSignature = signature;
+        setTimeout(() => { lastActionSignature = ""; }, 250);
         event.preventDefault();
         event.stopImmediatePropagation();
         runContextAction(contextButton.dataset.contextAction, contextTaskId);
@@ -1600,6 +1606,10 @@
 
       const taskDelete = event.target.closest("[data-delete-task]");
       if (taskDelete) {
+        const signature = `task:${taskDelete.dataset.deleteTask}`;
+        if (lastActionSignature === signature) return;
+        lastActionSignature = signature;
+        setTimeout(() => { lastActionSignature = ""; }, 250);
         event.preventDefault();
         event.stopImmediatePropagation();
         deleteTask(taskDelete.dataset.deleteTask);
@@ -1608,6 +1618,10 @@
 
       const projectDelete = event.target.closest("[data-delete-project]");
       if (projectDelete) {
+        const signature = `project:${projectDelete.dataset.deleteProject}`;
+        if (lastActionSignature === signature) return;
+        lastActionSignature = signature;
+        setTimeout(() => { lastActionSignature = ""; }, 250);
         event.preventDefault();
         event.stopImmediatePropagation();
         deleteProject(projectDelete.dataset.deleteProject);
@@ -1616,6 +1630,10 @@
 
       const memberDelete = event.target.closest("[data-delete-member]");
       if (memberDelete) {
+        const signature = `member:${memberDelete.dataset.deleteMember}`;
+        if (lastActionSignature === signature) return;
+        lastActionSignature = signature;
+        setTimeout(() => { lastActionSignature = ""; }, 250);
         event.preventDefault();
         event.stopImmediatePropagation();
         deleteMember(memberDelete.dataset.deleteMember);
@@ -1624,11 +1642,19 @@
 
       const statusDelete = event.target.closest("[data-delete-status]");
       if (statusDelete) {
+        const signature = `status:${statusDelete.dataset.deleteStatus}`;
+        if (lastActionSignature === signature) return;
+        lastActionSignature = signature;
+        setTimeout(() => { lastActionSignature = ""; }, 250);
         event.preventDefault();
         event.stopImmediatePropagation();
         deleteStatus(statusDelete.dataset.deleteStatus);
       }
-    }, true);
+    }
+
+    ["pointerdown", "mousedown", "click"].forEach((eventName) => {
+      document.addEventListener(eventName, runPrimaryButtonAction, true);
+    });
 
     document.getElementById("addTaskBtn").addEventListener("click", () => openTask());
     document.getElementById("settingsBtn").addEventListener("click", () => openModal("settingsModal"));
