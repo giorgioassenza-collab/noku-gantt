@@ -3,8 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>NOku Gantt</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
+  <script>
+    (() => {
+      const appVersion = "v5";
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("app") !== appVersion) {
+        params.set("app", appVersion);
+        window.location.replace(`${window.location.pathname}?${params.toString()}${window.location.hash}`);
+      }
+    })();
+  </script>
   <style>
     :root {
       --bg: #f2f2f2;
@@ -914,7 +927,8 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v4";
+    const storageKey = "noku-gantt-data-v5";
+    const legacyStorageKeys = ["noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -983,7 +997,24 @@
       };
     }
 
+    function migrateLegacyData() {
+      if (localStorage.getItem(storageKey)) return;
+      for (const key of legacyStorageKeys) {
+        try {
+          const saved = JSON.parse(localStorage.getItem(key));
+          if (saved && Array.isArray(saved.tasks)) {
+            localStorage.setItem(storageKey, JSON.stringify(normalizeData(saved)));
+            break;
+          }
+        } catch (error) {
+          console.warn(error);
+        }
+      }
+      legacyStorageKeys.forEach((key) => localStorage.removeItem(key));
+    }
+
     function loadData() {
+      migrateLegacyData();
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey));
         if (saved && Array.isArray(saved.tasks)) {
