@@ -1440,7 +1440,10 @@
         // Pointer capture may already be released by the browser.
       }
       currentDrag.bar.classList.remove("is-dragging");
-      if (!currentDrag.moved || options.cancel) {
+      if (!currentDrag.moved) {
+        return;
+      }
+      if (options.cancel) {
         render();
         return;
       }
@@ -1582,6 +1585,7 @@
     barsEl.addEventListener("click", (event) => {
       const deleteButton = event.target.closest("[data-delete-task]");
       if (!deleteButton) return;
+      event.preventDefault();
       event.stopPropagation();
       deleteTask(deleteButton.dataset.deleteTask);
     });
@@ -1629,7 +1633,6 @@
       if (!task) return;
       hideContextMenu();
       bar.setPointerCapture(event.pointerId);
-      bar.classList.add("is-dragging");
       dragState = {
         id: task.id,
         bar,
@@ -1656,6 +1659,7 @@
       const rawDeltaY = event.clientY - dragState.startY;
       if (!dragState.moved && Math.hypot(rawDeltaX, rawDeltaY) < 6) return;
       dragState.moved = true;
+      dragState.bar.classList.add("is-dragging");
       event.preventDefault();
       const dayDelta = Math.round((event.clientX - dragState.startX) / dayWidth());
       const projects = visibleProjects();
@@ -1700,7 +1704,7 @@
 
     document.getElementById("saveSettingsBtn").addEventListener("click", () => {
       saveSetupFromDom();
-      renderSettings();
+      render();
     });
 
     document.getElementById("projectList").addEventListener("input", (event) => {
@@ -1782,15 +1786,21 @@
     document.getElementById("statusList").addEventListener("change", saveSetupFromDom);
 
     document.getElementById("settingsModal").addEventListener("click", (event) => {
-      if (event.target.closest("[data-delete-project], [data-delete-member], [data-delete-status]")) {
-        saveSetupFromDom();
-      }
       const projectButton = event.target.closest("[data-delete-project]");
       const memberButton = event.target.closest("[data-delete-member]");
       const statusButton = event.target.closest("[data-delete-status]");
-      if (projectButton) deleteProject(projectButton.dataset.deleteProject);
-      if (memberButton) deleteMember(memberButton.dataset.deleteMember);
-      if (statusButton) deleteStatus(statusButton.dataset.deleteStatus);
+      if (!projectButton && !memberButton && !statusButton) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (projectButton) {
+        deleteProject(projectButton.dataset.deleteProject);
+        return;
+      }
+      if (memberButton) {
+        deleteMember(memberButton.dataset.deleteMember);
+        return;
+      }
+      deleteStatus(statusButton.dataset.deleteStatus);
     });
 
     document.getElementById("resetBtn").addEventListener("click", () => {
