@@ -914,7 +914,7 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v3";
+    const storageKey = "noku-gantt-data-v4";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1379,6 +1379,43 @@
       render();
     }
 
+    function runContextAction(action, taskId = contextTaskId) {
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) {
+        hideContextMenu();
+        return;
+      }
+      if (action === "edit") {
+        hideContextMenu();
+        openTask(task.id);
+        return;
+      }
+      if (action === "toggleDone") {
+        task.done = !task.done;
+        saveData();
+        hideContextMenu();
+        render();
+        return;
+      }
+      if (action === "addSubtask") {
+        task.subtasks = task.subtasks || [];
+        task.subtasks.push({ id: `sub-${Math.random().toString(16).slice(2)}`, title: "Nuovo sottotask", done: false });
+        saveData();
+        hideContextMenu();
+        render();
+        openTask(task.id);
+        return;
+      }
+      if (action === "duplicate") {
+        hideContextMenu();
+        duplicateTask(task.id);
+        return;
+      }
+      if (action === "delete") {
+        deleteTask(task.id);
+      }
+    }
+
     function bindBarControls() {
       barsEl.querySelectorAll("[data-delete-task]").forEach((button) => {
         button.onclick = (event) => {
@@ -1522,11 +1559,11 @@
     }
 
     document.addEventListener("click", (event) => {
-      const contextDelete = event.target.closest("#contextMenu [data-context-action='delete']");
-      if (contextDelete && contextTaskId) {
+      const contextButton = event.target.closest("#contextMenu [data-context-action]");
+      if (contextButton && contextTaskId) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        deleteTask(contextTaskId);
+        runContextAction(contextButton.dataset.contextAction, contextTaskId);
         return;
       }
 
@@ -1677,27 +1714,7 @@
       event.stopPropagation();
       const button = event.target.closest("[data-context-action]");
       if (!button || !contextTaskId) return;
-      const task = data.tasks.find((item) => item.id === contextTaskId);
-      if (!task) return hideContextMenu();
-      const action = button.dataset.contextAction;
-      if (action === "edit") openTask(task.id);
-      if (action === "toggleDone") {
-        task.done = !task.done;
-        saveData();
-        render();
-      }
-      if (action === "addSubtask") {
-        task.subtasks = task.subtasks || [];
-        task.subtasks.push({ id: `sub-${Math.random().toString(16).slice(2)}`, title: "Nuovo sottotask", done: false });
-        saveData();
-        render();
-        openTask(task.id);
-      }
-      if (action === "duplicate") duplicateTask(task.id);
-      if (action === "delete") {
-        deleteTask(task.id);
-      }
-      hideContextMenu();
+      runContextAction(button.dataset.contextAction, contextTaskId);
     });
 
     barsEl.addEventListener("pointerdown", (event) => {
