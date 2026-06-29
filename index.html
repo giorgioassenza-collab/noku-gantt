@@ -556,6 +556,7 @@
     }
 
     .field.full { grid-column: 1 / -1; }
+    .field.is-hidden { display: none; }
 
     label {
       color: var(--muted);
@@ -583,6 +584,25 @@
     input[type="color"] {
       height: 42px;
       padding: 4px;
+    }
+
+    .check-line {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 2px solid var(--ink);
+      background: #fff;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .check-line input {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      accent-color: var(--accent);
     }
 
     .modal-actions {
@@ -793,8 +813,15 @@
             <input id="taskStart" type="date" required>
           </div>
           <div class="field">
+            <label for="taskHasEnd">Durata</label>
+            <label class="check-line">
+              <input id="taskHasEnd" type="checkbox">
+              <span>Aggiungi data di fine</span>
+            </label>
+          </div>
+          <div class="field" id="taskEndField">
             <label for="taskEnd">Fine</label>
-            <input id="taskEnd" type="date" required>
+            <input id="taskEnd" type="date">
           </div>
           <div class="field">
             <label for="taskStatus">Status</label>
@@ -929,6 +956,7 @@
         members: [member],
         start: iso(addDays(today, startOffset)),
         end: iso(addDays(today, endOffset)),
+        hasEnd: endOffset !== startOffset,
         status,
         done: false,
         notes: "",
@@ -942,7 +970,11 @@
     function loadData() {
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey));
-        if (saved && Array.isArray(saved.tasks)) return normalizeData(saved);
+        if (saved && Array.isArray(saved.tasks)) {
+          const normalized = normalizeData(saved);
+          localStorage.setItem(storageKey, JSON.stringify(normalized));
+          return normalized;
+        }
       } catch (error) {
         console.warn(error);
       }
@@ -960,6 +992,9 @@
         ...task,
         projectId: task.projectId || normalized.projects[0]?.id || "",
         members: Array.isArray(task.members) && task.members.length ? task.members : (task.member ? [task.member] : [normalized.members[0]?.name].filter(Boolean)),
+        start: task.start || iso(today),
+        end: task.hasEnd === false ? (task.start || iso(today)) : (task.end || task.start || iso(today)),
+        hasEnd: task.hasEnd === true || Boolean(task.end && task.start && task.end !== task.start),
         notes: task.notes || "",
         subtasks: Array.isArray(task.subtasks) ? task.subtasks.map((subtask) => ({
           id: subtask.id || `sub-${Math.random().toString(16).slice(2)}`,
@@ -1201,13 +1236,26 @@
         option.selected = selectedMembers.includes(option.value);
       });
       document.getElementById("taskStart").value = task?.start || iso(today);
-      document.getElementById("taskEnd").value = task?.end || iso(addDays(today, 7));
+      document.getElementById("taskHasEnd").checked = Boolean(task?.hasEnd);
+      document.getElementById("taskEnd").value = task?.end || task?.start || iso(today);
+      updateTaskEndField();
       document.getElementById("taskStatus").value = task?.status || data.statuses[0]?.name || "";
       document.getElementById("taskDone").value = String(Boolean(task?.done));
       document.getElementById("taskNotes").value = task?.notes || "";
       renderSubtasks(task?.subtasks || []);
       document.getElementById("deleteTaskBtn").style.display = task ? "" : "none";
       openModal("taskModal");
+    }
+
+    function updateTaskEndField() {
+      const hasEnd = document.getElementById("taskHasEnd").checked;
+      const endField = document.getElementById("taskEndField");
+      const startValue = document.getElementById("taskStart").value || iso(today);
+      const endInput = document.getElementById("taskEnd");
+      endField.classList.toggle("is-hidden", !hasEnd);
+      endInput.required = hasEnd;
+      if (!hasEnd) endInput.value = startValue;
+      if (hasEnd && !endInput.value) endInput.value = startValue;
     }
 
     function renderSubtasks(subtasks) {
@@ -1314,6 +1362,11 @@
       fields[fields.length - 1]?.focus();
     });
 
+    document.getElementById("taskHasEnd").addEventListener("change", updateTaskEndField);
+    document.getElementById("taskStart").addEventListener("change", () => {
+      if (!document.getElementById("taskHasEnd").checked) updateTaskEndField();
+    });
+
     subtaskList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-delete-subtask]");
       if (!button) return;
@@ -1324,7 +1377,8 @@
       event.preventDefault();
       const id = document.getElementById("taskId").value || (crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}`);
       let start = document.getElementById("taskStart").value;
-      let end = document.getElementById("taskEnd").value;
+      const hasEnd = document.getElementById("taskHasEnd").checked;
+      let end = hasEnd ? document.getElementById("taskEnd").value : start;
       if (parseDate(end) < parseDate(start)) [start, end] = [end, start];
       const next = {
         id,
@@ -1333,6 +1387,7 @@
         members: [...document.getElementById("taskMembers").selectedOptions].map((option) => option.value),
         start,
         end,
+        hasEnd,
         status: document.getElementById("taskStatus").value,
         done: document.getElementById("taskDone").value === "true",
         notes: document.getElementById("taskNotes").value.trim(),
@@ -1422,15 +1477,22 @@
       if (!bar) return;
       const task = data.tasks.find((item) => item.id === bar.dataset.taskId);
       if (!task) return;
+      hideContextMenu();
       bar.setPointerCapture(event.pointerId);
       bar.classList.add("is-dragging");
       dragState = {
         id: task.id,
+        bar,
         startX: event.clientX,
         startY: event.clientY,
         originalStart: parseDate(task.start),
         originalEnd: parseDate(task.end),
-        originalProjectId: task.projectId
+        originalProjectId: task.projectId,
+        originalLeft: parseFloat(bar.style.left) || 0,
+        originalTop: parseFloat(bar.style.top) || 0,
+        latestStart: task.start,
+        latestEnd: task.end,
+        latestProjectId: task.projectId
       };
     });
 
@@ -1442,16 +1504,23 @@
       const projects = visibleProjects();
       const projectDelta = Math.round((event.clientY - dragState.startY) / rowHeight());
       const originalIndex = projects.findIndex((project) => project.id === dragState.originalProjectId);
-      task.start = iso(addDays(dragState.originalStart, dayDelta));
-      task.end = iso(addDays(dragState.originalEnd, dayDelta));
-      task.projectId = projects[Math.max(0, Math.min(projects.length - 1, originalIndex + projectDelta))]?.id || task.projectId;
-      renderTimeline();
-      const active = barsEl.querySelector(`[data-task-id="${task.id}"]`);
-      if (active) active.classList.add("is-dragging");
+      const nextIndex = Math.max(0, Math.min(projects.length - 1, originalIndex + projectDelta));
+      const nextProject = projects[nextIndex];
+      dragState.latestStart = iso(addDays(dragState.originalStart, dayDelta));
+      dragState.latestEnd = iso(addDays(dragState.originalEnd, dayDelta));
+      dragState.latestProjectId = nextProject?.id || dragState.originalProjectId;
+      dragState.bar.style.left = `${dragState.originalLeft + (dayDelta * dayWidth())}px`;
+      dragState.bar.style.top = `${nextIndex * rowHeight() + 12}px`;
     });
 
     window.addEventListener("pointerup", () => {
       if (!dragState) return;
+      const task = data.tasks.find((item) => item.id === dragState.id);
+      if (task) {
+        task.start = dragState.latestStart;
+        task.end = dragState.latestEnd;
+        task.projectId = dragState.latestProjectId;
+      }
       saveData();
       dragState = null;
       render();
