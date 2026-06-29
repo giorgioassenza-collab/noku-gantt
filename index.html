@@ -1216,6 +1216,7 @@
           </div>
         `;
       }).join("") || `<div class="empty">Nessun task visibile. Aggiungi un task o cambia filtro.</div>`;
+      bindBarControls();
     }
 
     function renderFormOptions() {
@@ -1248,7 +1249,7 @@
           <button class="icon-btn" data-delete-status="${escapeAttr(status.name)}" type="button" title="Elimina">x</button>
         </div>
       `).join("");
-
+      bindSettingsControls();
     }
 
     function openTask(taskId) {
@@ -1376,6 +1377,40 @@
       data.tasks = data.tasks.map((task) => task.status === name ? { ...task, status: data.statuses[0].name } : task);
       saveData();
       render();
+    }
+
+    function bindBarControls() {
+      barsEl.querySelectorAll("[data-delete-task]").forEach((button) => {
+        button.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          deleteTask(button.dataset.deleteTask);
+        };
+      });
+    }
+
+    function bindSettingsControls() {
+      document.querySelectorAll("[data-delete-project]").forEach((button) => {
+        button.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          deleteProject(button.dataset.deleteProject);
+        };
+      });
+      document.querySelectorAll("[data-delete-member]").forEach((button) => {
+        button.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          deleteMember(button.dataset.deleteMember);
+        };
+      });
+      document.querySelectorAll("[data-delete-status]").forEach((button) => {
+        button.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          deleteStatus(button.dataset.deleteStatus);
+        };
+      });
     }
 
     function saveSetupFromDom() {
