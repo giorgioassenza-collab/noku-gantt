@@ -382,7 +382,7 @@
       border: 2px solid var(--ink);
       background: var(--panel);
       box-shadow: 4px 4px 0 var(--ink);
-      color: var(--ink);
+      color: var(--text);
       overflow: hidden;
       user-select: none;
       touch-action: none;
@@ -437,7 +437,8 @@
     }
 
     .bar-subtasks,
-    .bar-label {
+    .bar-label,
+    .bar-member {
       flex: 0 0 auto;
       height: 18px;
       display: inline-flex;
@@ -459,6 +460,14 @@
 
     .bar-label {
       max-width: 84px;
+      padding: 0 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-member {
+      max-width: 74px;
       padding: 0 6px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -595,6 +604,10 @@
       align-items: center;
     }
 
+    select[multiple] {
+      min-height: 96px;
+    }
+
     .subtask-panel {
       display: grid;
       gap: 8px;
@@ -725,7 +738,7 @@
       <div class="tab">Gantt</div>
       <div class="spacer"></div>
       <div class="tool-group" aria-label="Controlli Gantt">
-        <select class="select" id="memberFilter" title="Filtro membro"></select>
+        <select class="select" id="projectFilter" title="Filtro progetto"></select>
         <button class="icon-btn" id="zoomOut" title="Riduci zoom">-</button>
         <span class="zoom-label" id="zoomLabel">100%</span>
         <button class="icon-btn" id="zoomIn" title="Aumenta zoom">+</button>
@@ -738,7 +751,7 @@
     <section class="board" id="board" aria-label="Tabella Gantt">
       <aside class="sidebar">
         <div class="corner">
-          <strong>Team</strong>
+          <strong>Progetti</strong>
           <span>righe operative</span>
         </div>
         <div id="rows"></div>
@@ -772,8 +785,8 @@
             <select id="taskProject" required></select>
           </div>
           <div class="field">
-            <label for="taskMember">Membro</label>
-            <select id="taskMember" required></select>
+            <label for="taskMembers">Membri</label>
+            <select id="taskMembers" multiple required></select>
           </div>
           <div class="field">
             <label for="taskStart">Inizio</label>
@@ -786,10 +799,6 @@
           <div class="field">
             <label for="taskStatus">Status</label>
             <select id="taskStatus" required></select>
-          </div>
-          <div class="field">
-            <label for="taskLabel">Label</label>
-            <select id="taskLabel"></select>
           </div>
           <div class="field">
             <label for="taskDone">Completato</label>
@@ -844,12 +853,6 @@
         </div>
         <div class="settings-list" id="statusList"></div>
 
-        <div class="settings-title">
-          <h3>Label</h3>
-          <button class="text-btn" id="addLabelBtn" type="button">Aggiungi</button>
-        </div>
-        <div class="settings-list" id="labelList"></div>
-
         <div class="modal-actions">
           <button class="text-btn warn" id="resetBtn" type="button">Reset demo</button>
           <button class="text-btn primary" type="button" data-close-modal>Fine</button>
@@ -880,14 +883,19 @@
         { id: "content-engine", name: "Content engine", color: "#00e0ff" },
         { id: "paid-media", name: "Paid media", color: "#ff4f9a" }
       ],
-      members: ["Strategy", "Creative", "Social", "Media", "Production"],
+      members: [
+        { name: "Strategy", color: "#d9ff00" },
+        { name: "Creative", color: "#00e0ff" },
+        { name: "Social", color: "#ff4f9a" },
+        { name: "Media", color: "#ff6b00" },
+        { name: "Production", color: "#34d399" }
+      ],
       statuses: [
         { name: "Backlog", color: "#cfcfcf" },
         { name: "In corso", color: "#d9ff00" },
         { name: "Review", color: "#00e0ff" },
         { name: "Live", color: "#34d399" }
       ],
-      labels: ["Urgente", "Cliente", "Internal"],
       tasks: [
         taskSeed("Kickoff e perimetro", "brand-platform", "Strategy", -4, 4, "In corso"),
         taskSeed("Concept visual", "brand-platform", "Creative", 2, 12, "Backlog"),
@@ -898,7 +906,7 @@
     };
 
     let data = loadData();
-    let zoom = Number(localStorage.getItem("noku-gantt-zoom") || 1);
+    let zoom = clampZoom(Number(localStorage.getItem("noku-gantt-zoom") || 1));
     let dragState = null;
 
     const board = document.getElementById("board");
@@ -908,7 +916,7 @@
     const barsEl = document.getElementById("bars");
     const gridEl = document.getElementById("grid");
     const weekendsEl = document.getElementById("weekends");
-    const memberFilter = document.getElementById("memberFilter");
+    const projectFilter = document.getElementById("projectFilter");
     const contextMenu = document.getElementById("contextMenu");
     const subtaskList = document.getElementById("subtaskList");
     let contextTaskId = "";
@@ -918,11 +926,10 @@
         id: crypto.randomUUID ? crypto.randomUUID() : `task-${Math.random().toString(16).slice(2)}`,
         name,
         projectId,
-        member,
+        members: [member],
         start: iso(addDays(today, startOffset)),
         end: iso(addDays(today, endOffset)),
         status,
-        label: "",
         done: false,
         notes: "",
         subtasks: [
@@ -945,14 +952,14 @@
     function normalizeData(source) {
       const normalized = {
         projects: Array.isArray(source.projects) && source.projects.length ? source.projects : structuredClone(starterData.projects),
-        members: Array.isArray(source.members) && source.members.length ? source.members : structuredClone(starterData.members),
+        members: Array.isArray(source.members) && source.members.length ? source.members.map(normalizeMember) : structuredClone(starterData.members),
         statuses: Array.isArray(source.statuses) && source.statuses.length ? source.statuses : structuredClone(starterData.statuses),
-        labels: Array.isArray(source.labels) ? source.labels : structuredClone(starterData.labels),
         tasks: Array.isArray(source.tasks) ? source.tasks : []
       };
       normalized.tasks = normalized.tasks.map((task) => ({
         ...task,
-        label: task.label || "",
+        projectId: task.projectId || normalized.projects[0]?.id || "",
+        members: Array.isArray(task.members) && task.members.length ? task.members : (task.member ? [task.member] : [normalized.members[0]?.name].filter(Boolean)),
         notes: task.notes || "",
         subtasks: Array.isArray(task.subtasks) ? task.subtasks.map((subtask) => ({
           id: subtask.id || `sub-${Math.random().toString(16).slice(2)}`,
@@ -961,6 +968,14 @@
         })) : []
       }));
       return normalized;
+    }
+
+    function normalizeMember(member, index = 0) {
+      if (typeof member === "string") return { name: member, color: colors[index % colors.length] };
+      return {
+        name: member?.name || `Team ${index + 1}`,
+        color: member?.color || colors[index % colors.length]
+      };
     }
 
     function saveData() {
@@ -998,6 +1013,11 @@
       return Number(getComputedStyle(document.documentElement).getPropertyValue("--day").replace("px", ""));
     }
 
+    function clampZoom(value) {
+      if (!Number.isFinite(value)) return 1;
+      return Math.max(.35, Math.min(3, value));
+    }
+
     function rowHeight() {
       return Number(getComputedStyle(document.documentElement).getPropertyValue("--row").replace("px", ""));
     }
@@ -1013,15 +1033,14 @@
       return { start, end, totalDays: daysBetween(start, end) };
     }
 
-    function visibleMembers() {
-      const selected = memberFilter.value;
-      if (selected && selected !== "all") return data.members.filter((member) => member === selected);
-      return data.members;
+    function visibleProjects() {
+      const selected = projectFilter.value;
+      if (selected && selected !== "all") return data.projects.filter((project) => project.id === selected);
+      return data.projects;
     }
 
     function render() {
-      document.documentElement.style.setProperty("--day", `${Math.round(92 * zoom)}px`);
-      document.getElementById("zoomLabel").textContent = `${Math.round(zoom * 100)}%`;
+      applyZoom();
       renderFilters();
       renderRows();
       renderTimeline();
@@ -1029,17 +1048,22 @@
       renderSettings();
     }
 
+    function applyZoom() {
+      document.documentElement.style.setProperty("--day", `${Math.round(92 * zoom)}px`);
+      document.getElementById("zoomLabel").textContent = `${Math.round(zoom * 100)}%`;
+    }
+
     function renderFilters() {
-      const current = memberFilter.value || "all";
-      memberFilter.innerHTML = `<option value="all">Tutto il team</option>${data.members.map((member) => `<option value="${escapeHtml(member)}">${escapeHtml(member)}</option>`).join("")}`;
-      memberFilter.value = data.members.includes(current) ? current : "all";
+      const current = projectFilter.value || "all";
+      projectFilter.innerHTML = `<option value="all">Tutti i progetti</option>${data.projects.map((project) => `<option value="${project.id}">${escapeHtml(project.name)}</option>`).join("")}`;
+      projectFilter.value = data.projects.some((project) => project.id === current) ? current : "all";
     }
 
     function renderRows() {
-      rowsEl.innerHTML = visibleMembers().map((member, index) => `
+      rowsEl.innerHTML = visibleProjects().map((project) => `
         <div class="member-row">
-          <span class="avatar" style="background:${colors[index % colors.length]}">${initials(member)}</span>
-          <span>${escapeHtml(member)}</span>
+          <span class="avatar" style="background:${project.color}">${initials(project.name)}</span>
+          <span>${escapeHtml(project.name)}</span>
         </div>
       `).join("");
     }
@@ -1047,7 +1071,7 @@
     function renderTimeline() {
       const range = rangeForTasks();
       const width = range.totalDays * dayWidth();
-      const height = visibleMembers().length * rowHeight();
+      const height = visibleProjects().length * rowHeight();
       timeline.style.width = `${width}px`;
       timeline.style.height = `${height + 78}px`;
       gridEl.style.height = `${height}px`;
@@ -1103,27 +1127,31 @@
     }
 
     function renderBars(range) {
-      const members = visibleMembers();
-      const tasks = data.tasks.filter((task) => members.includes(task.member));
-      barsEl.style.height = `${members.length * rowHeight()}px`;
+      const projects = visibleProjects();
+      const projectIds = projects.map((project) => project.id);
+      const tasks = data.tasks.filter((task) => projectIds.includes(task.projectId));
+      barsEl.style.height = `${projects.length * rowHeight()}px`;
       barsEl.innerHTML = tasks.map((task) => {
         const project = data.projects.find((item) => item.id === task.projectId) || data.projects[0];
         const status = data.statuses.find((item) => item.name === task.status) || data.statuses[0];
         const left = diffDays(parseDate(task.start), range.start) * dayWidth() + 8;
-        const top = members.indexOf(task.member) * rowHeight() + 12;
+        const top = projects.findIndex((item) => item.id === task.projectId) * rowHeight() + 12;
         const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
         const done = task.done ? " is-done" : "";
         const subtasks = task.subtasks || [];
         const completedSubtasks = subtasks.filter((subtask) => subtask.done).length;
         const subtaskBadge = subtasks.length ? `<span class="bar-subtasks">${completedSubtasks}/${subtasks.length}</span>` : "";
-        const labelBadge = task.label ? `<span class="bar-label">${escapeHtml(task.label)}</span>` : "";
+        const memberBadges = (task.members || []).map((memberName) => {
+          const member = data.members.find((item) => item.name === memberName);
+          return `<span class="bar-member" style="background:${member?.color || "#fff"}">${escapeHtml(memberName)}</span>`;
+        }).join("");
+        const statusBadge = `<span class="bar-label" style="background:${status.color}">${escapeHtml(status.name)}</span>`;
         return `
-          <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(84, width)}px;border-color:${project.color};color:${project.color}">
-            <span class="bar-status" style="background:${status.color}"></span>
+          <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(160, width)}px;border-color:${project.color}">
             <span class="bar-title">${escapeHtml(task.name)}</span>
-            ${labelBadge}
             ${subtaskBadge}
-            <span class="bar-meta">${escapeHtml(task.member)}</span>
+            ${memberBadges}
+            ${statusBadge}
           </div>
         `;
       }).join("") || `<div class="empty">Nessun task visibile. Aggiungi un task o cambia filtro.</div>`;
@@ -1131,9 +1159,8 @@
 
     function renderFormOptions() {
       document.getElementById("taskProject").innerHTML = data.projects.map((project) => `<option value="${project.id}">${escapeHtml(project.name)}</option>`).join("");
-      document.getElementById("taskMember").innerHTML = data.members.map((member) => `<option value="${escapeHtml(member)}">${escapeHtml(member)}</option>`).join("");
+      document.getElementById("taskMembers").innerHTML = data.members.map((member) => `<option value="${escapeHtml(member.name)}">${escapeHtml(member.name)}</option>`).join("");
       document.getElementById("taskStatus").innerHTML = data.statuses.map((status) => `<option value="${escapeHtml(status.name)}">${escapeHtml(status.name)}</option>`).join("");
-      document.getElementById("taskLabel").innerHTML = `<option value="">Nessuna label</option>${data.labels.map((label) => `<option value="${escapeHtml(label)}">${escapeHtml(label)}</option>`).join("")}`;
     }
 
     function renderSettings() {
@@ -1147,9 +1174,9 @@
 
       document.getElementById("memberList").innerHTML = data.members.map((member) => `
         <div class="settings-row">
-          <input data-member-name="${escapeAttr(member)}" value="${escapeAttr(member)}">
-          <span></span>
-          <button class="icon-btn" data-delete-member="${escapeAttr(member)}" title="Elimina">x</button>
+          <input data-member-name="${escapeAttr(member.name)}" value="${escapeAttr(member.name)}">
+          <input data-member-color="${escapeAttr(member.name)}" type="color" value="${member.color}">
+          <button class="icon-btn" data-delete-member="${escapeAttr(member.name)}" title="Elimina">x</button>
         </div>
       `).join("");
 
@@ -1161,13 +1188,6 @@
         </div>
       `).join("");
 
-      document.getElementById("labelList").innerHTML = data.labels.map((label) => `
-        <div class="settings-row">
-          <input data-label-name="${escapeAttr(label)}" value="${escapeAttr(label)}">
-          <span></span>
-          <button class="icon-btn" data-delete-label="${escapeAttr(label)}" title="Elimina">x</button>
-        </div>
-      `).join("");
     }
 
     function openTask(taskId) {
@@ -1176,11 +1196,13 @@
       document.getElementById("taskId").value = task?.id || "";
       document.getElementById("taskName").value = task?.name || "";
       document.getElementById("taskProject").value = task?.projectId || data.projects[0]?.id || "";
-      document.getElementById("taskMember").value = task?.member || data.members[0] || "";
+      const selectedMembers = task?.members || [data.members[0]?.name].filter(Boolean);
+      [...document.getElementById("taskMembers").options].forEach((option) => {
+        option.selected = selectedMembers.includes(option.value);
+      });
       document.getElementById("taskStart").value = task?.start || iso(today);
       document.getElementById("taskEnd").value = task?.end || iso(addDays(today, 7));
       document.getElementById("taskStatus").value = task?.status || data.statuses[0]?.name || "";
-      document.getElementById("taskLabel").value = task?.label || "";
       document.getElementById("taskDone").value = String(Boolean(task?.done));
       document.getElementById("taskNotes").value = task?.notes || "";
       renderSubtasks(task?.subtasks || []);
@@ -1308,11 +1330,10 @@
         id,
         name: document.getElementById("taskName").value.trim(),
         projectId: document.getElementById("taskProject").value,
-        member: document.getElementById("taskMember").value,
+        members: [...document.getElementById("taskMembers").selectedOptions].map((option) => option.value),
         start,
         end,
         status: document.getElementById("taskStatus").value,
-        label: document.getElementById("taskLabel").value,
         done: document.getElementById("taskDone").value === "true",
         notes: document.getElementById("taskNotes").value.trim(),
         subtasks: collectSubtasks()
@@ -1332,15 +1353,19 @@
     });
 
     document.getElementById("zoomIn").addEventListener("click", () => {
-      zoom = Math.min(1.8, Math.round((zoom + .1) * 10) / 10);
-      localStorage.setItem("noku-gantt-zoom", zoom);
+      const ratio = board.scrollLeft / Math.max(1, timeline.offsetWidth);
+      zoom = clampZoom(Math.round((zoom + .25) * 100) / 100);
+      localStorage.setItem("noku-gantt-zoom", String(zoom));
       render();
+      board.scrollLeft = ratio * timeline.offsetWidth;
     });
 
     document.getElementById("zoomOut").addEventListener("click", () => {
-      zoom = Math.max(.6, Math.round((zoom - .1) * 10) / 10);
-      localStorage.setItem("noku-gantt-zoom", zoom);
+      const ratio = board.scrollLeft / Math.max(1, timeline.offsetWidth);
+      zoom = clampZoom(Math.round((zoom - .25) * 100) / 100);
+      localStorage.setItem("noku-gantt-zoom", String(zoom));
       render();
+      board.scrollLeft = ratio * timeline.offsetWidth;
     });
 
     document.getElementById("todayBtn").addEventListener("click", () => {
@@ -1349,7 +1374,7 @@
       board.scrollTo({ left, behavior: "smooth" });
     });
 
-    memberFilter.addEventListener("change", render);
+    projectFilter.addEventListener("change", render);
 
     barsEl.addEventListener("dblclick", (event) => {
       const bar = event.target.closest("[data-task-id]");
@@ -1405,7 +1430,7 @@
         startY: event.clientY,
         originalStart: parseDate(task.start),
         originalEnd: parseDate(task.end),
-        originalMember: task.member
+        originalProjectId: task.projectId
       };
     });
 
@@ -1414,12 +1439,12 @@
       const task = data.tasks.find((item) => item.id === dragState.id);
       if (!task) return;
       const dayDelta = Math.round((event.clientX - dragState.startX) / dayWidth());
-      const members = visibleMembers();
-      const memberDelta = Math.round((event.clientY - dragState.startY) / rowHeight());
-      const originalIndex = members.indexOf(dragState.originalMember);
+      const projects = visibleProjects();
+      const projectDelta = Math.round((event.clientY - dragState.startY) / rowHeight());
+      const originalIndex = projects.findIndex((project) => project.id === dragState.originalProjectId);
       task.start = iso(addDays(dragState.originalStart, dayDelta));
       task.end = iso(addDays(dragState.originalEnd, dayDelta));
-      task.member = members[Math.max(0, Math.min(members.length - 1, originalIndex + memberDelta))] || task.member;
+      task.projectId = projects[Math.max(0, Math.min(projects.length - 1, originalIndex + projectDelta))]?.id || task.projectId;
       renderTimeline();
       const active = barsEl.querySelector(`[data-task-id="${task.id}"]`);
       if (active) active.classList.add("is-dragging");
@@ -1440,19 +1465,13 @@
     });
 
     document.getElementById("addMemberBtn").addEventListener("click", () => {
-      data.members.push(`Team ${data.members.length + 1}`);
+      data.members.push({ name: `Team ${data.members.length + 1}`, color: colors[data.members.length % colors.length] });
       saveData();
       render();
     });
 
     document.getElementById("addStatusBtn").addEventListener("click", () => {
       data.statuses.push({ name: `Status ${data.statuses.length + 1}`, color: colors[data.statuses.length % colors.length] });
-      saveData();
-      render();
-    });
-
-    document.getElementById("addLabelBtn").addEventListener("click", () => {
-      data.labels.push(`Label ${data.labels.length + 1}`);
       saveData();
       render();
     });
@@ -1469,21 +1488,37 @@
         if (project) project.color = colorInput.value;
       }
       saveData();
+      renderFilters();
+      renderRows();
       renderFormOptions();
       renderTimeline();
     });
 
     document.getElementById("memberList").addEventListener("input", (event) => {
       const input = event.target.closest("[data-member-name]");
-      if (!input || !input.value.trim()) return;
-      const oldName = input.dataset.memberName;
-      const nextName = input.value.trim();
-      data.members = data.members.map((member) => member === oldName ? nextName : member);
-      data.tasks = data.tasks.map((task) => task.member === oldName ? { ...task, member: nextName } : task);
-      input.dataset.memberName = nextName;
+      const colorInput = event.target.closest("[data-member-color]");
+      if (input) {
+        if (!input.value.trim()) return;
+        const oldName = input.dataset.memberName;
+        const nextName = input.value.trim();
+        const member = data.members.find((item) => item.name === oldName);
+        if (member) member.name = nextName;
+        data.tasks = data.tasks.map((task) => ({
+          ...task,
+          members: (task.members || []).map((memberName) => memberName === oldName ? nextName : memberName)
+        }));
+        input.dataset.memberName = nextName;
+        const row = input.closest(".settings-row");
+        const rowColor = row.querySelector("[data-member-color]");
+        const rowDelete = row.querySelector("[data-delete-member]");
+        if (rowColor) rowColor.dataset.memberColor = nextName;
+        if (rowDelete) rowDelete.dataset.deleteMember = nextName;
+      }
+      if (colorInput) {
+        const member = data.members.find((item) => item.name === colorInput.dataset.memberColor);
+        if (member) member.color = colorInput.value;
+      }
       saveData();
-      renderFilters();
-      renderRows();
       renderTimeline();
       renderFormOptions();
     });
@@ -1498,6 +1533,11 @@
         if (status) status.name = nextName;
         data.tasks = data.tasks.map((task) => task.status === oldName ? { ...task, status: nextName } : task);
         nameInput.dataset.statusName = nextName;
+        const row = nameInput.closest(".settings-row");
+        const rowColor = row.querySelector("[data-status-color]");
+        const rowDelete = row.querySelector("[data-delete-status]");
+        if (rowColor) rowColor.dataset.statusColor = nextName;
+        if (rowDelete) rowDelete.dataset.deleteStatus = nextName;
       }
       if (colorInput) {
         const status = data.statuses.find((item) => item.name === colorInput.dataset.statusColor);
@@ -1508,24 +1548,10 @@
       renderTimeline();
     });
 
-    document.getElementById("labelList").addEventListener("input", (event) => {
-      const input = event.target.closest("[data-label-name]");
-      if (!input || !input.value.trim()) return;
-      const oldLabel = input.dataset.labelName;
-      const nextLabel = input.value.trim();
-      data.labels = data.labels.map((label) => label === oldLabel ? nextLabel : label);
-      data.tasks = data.tasks.map((task) => task.label === oldLabel ? { ...task, label: nextLabel } : task);
-      input.dataset.labelName = nextLabel;
-      saveData();
-      renderFormOptions();
-      renderTimeline();
-    });
-
     document.getElementById("settingsModal").addEventListener("click", (event) => {
       const projectButton = event.target.closest("[data-delete-project]");
       const memberButton = event.target.closest("[data-delete-member]");
       const statusButton = event.target.closest("[data-delete-status]");
-      const labelButton = event.target.closest("[data-delete-label]");
       if (projectButton && data.projects.length > 1) {
         const id = projectButton.dataset.deleteProject;
         data.projects = data.projects.filter((project) => project.id !== id);
@@ -1533,20 +1559,18 @@
       }
       if (memberButton && data.members.length > 1) {
         const name = memberButton.dataset.deleteMember;
-        data.members = data.members.filter((member) => member !== name);
-        data.tasks = data.tasks.map((task) => task.member === name ? { ...task, member: data.members[0] } : task);
+        data.members = data.members.filter((member) => member.name !== name);
+        data.tasks = data.tasks.map((task) => {
+          const members = (task.members || []).filter((member) => member !== name);
+          return { ...task, members: members.length ? members : [data.members[0]?.name].filter(Boolean) };
+        });
       }
       if (statusButton && data.statuses.length > 1) {
         const name = statusButton.dataset.deleteStatus;
         data.statuses = data.statuses.filter((status) => status.name !== name);
         data.tasks = data.tasks.map((task) => task.status === name ? { ...task, status: data.statuses[0].name } : task);
       }
-      if (labelButton) {
-        const label = labelButton.dataset.deleteLabel;
-        data.labels = data.labels.filter((item) => item !== label);
-        data.tasks = data.tasks.map((task) => task.label === label ? { ...task, label: "" } : task);
-      }
-      if (projectButton || memberButton || statusButton || labelButton) {
+      if (projectButton || memberButton || statusButton) {
         saveData();
         render();
       }
