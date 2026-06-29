@@ -474,6 +474,21 @@
       white-space: nowrap;
     }
 
+    .bar-delete {
+      flex: 0 0 auto;
+      width: 20px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--ink);
+      background: #fff1f1;
+      color: #8c1111;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+      box-shadow: none;
+    }
+
     .empty {
       position: absolute;
       left: 24px;
@@ -1197,6 +1212,7 @@
             ${subtaskBadge}
             ${memberBadges}
             ${statusBadge}
+            <button class="bar-delete" data-delete-task="${task.id}" type="button" title="Elimina task">x</button>
           </div>
         `;
       }).join("") || `<div class="empty">Nessun task visibile. Aggiungi un task o cambia filtro.</div>`;
@@ -1213,7 +1229,7 @@
         <div class="settings-row">
           <input data-project-name="${project.id}" value="${escapeAttr(project.name)}">
           <input data-project-color="${project.id}" type="color" value="${project.color}">
-          <button class="icon-btn" data-delete-project="${project.id}" title="Elimina">x</button>
+          <button class="icon-btn" data-delete-project="${project.id}" type="button" title="Elimina">x</button>
         </div>
       `).join("");
 
@@ -1221,7 +1237,7 @@
         <div class="settings-row">
           <input data-member-name="${escapeAttr(member.name)}" value="${escapeAttr(member.name)}">
           <input data-member-color="${escapeAttr(member.name)}" type="color" value="${member.color}">
-          <button class="icon-btn" data-delete-member="${escapeAttr(member.name)}" title="Elimina">x</button>
+          <button class="icon-btn" data-delete-member="${escapeAttr(member.name)}" type="button" title="Elimina">x</button>
         </div>
       `).join("");
 
@@ -1229,7 +1245,7 @@
         <div class="settings-row">
           <input data-status-name="${escapeAttr(status.name)}" value="${escapeAttr(status.name)}">
           <input data-status-color="${escapeAttr(status.name)}" type="color" value="${status.color}">
-          <button class="icon-btn" data-delete-status="${escapeAttr(status.name)}" title="Elimina">x</button>
+          <button class="icon-btn" data-delete-status="${escapeAttr(status.name)}" type="button" title="Elimina">x</button>
         </div>
       `).join("");
 
@@ -1326,6 +1342,42 @@
       render();
     }
 
+    function deleteProject(projectId) {
+      if (!projectId) return;
+      data.projects = data.projects.filter((project) => project.id !== projectId);
+      if (!data.projects.length) {
+        data.projects.push({ id: "nuovo-progetto", name: "Nuovo progetto", color: colors[0] });
+      }
+      data.tasks = data.tasks.map((task) => task.projectId === projectId ? { ...task, projectId: data.projects[0].id } : task);
+      saveData();
+      render();
+    }
+
+    function deleteMember(name) {
+      if (!name) return;
+      data.members = data.members.filter((member) => member.name !== name);
+      if (!data.members.length) {
+        data.members.push({ name: "Team 1", color: colors[0] });
+      }
+      data.tasks = data.tasks.map((task) => {
+        const members = (task.members || []).filter((member) => member !== name);
+        return { ...task, members: members.length ? members : [data.members[0].name] };
+      });
+      saveData();
+      render();
+    }
+
+    function deleteStatus(name) {
+      if (!name) return;
+      data.statuses = data.statuses.filter((status) => status.name !== name);
+      if (!data.statuses.length) {
+        data.statuses.push({ name: "Status 1", color: colors[0] });
+      }
+      data.tasks = data.tasks.map((task) => task.status === name ? { ...task, status: data.statuses[0].name } : task);
+      saveData();
+      render();
+    }
+
     function saveSetupFromDom() {
       document.querySelectorAll("[data-project-name]").forEach((input) => {
         const project = data.projects.find((item) => item.id === input.dataset.projectName);
@@ -1375,6 +1427,31 @@
         if (status) status.color = input.value;
       });
       saveAndRefresh({ settings: false });
+    }
+
+    function finishDrag(event, options = {}) {
+      if (!dragState) return;
+      if (event?.preventDefault) event.preventDefault();
+      const currentDrag = dragState;
+      dragState = null;
+      try {
+        currentDrag.bar.releasePointerCapture?.(currentDrag.pointerId);
+      } catch (error) {
+        // Pointer capture may already be released by the browser.
+      }
+      currentDrag.bar.classList.remove("is-dragging");
+      if (!currentDrag.moved || options.cancel) {
+        render();
+        return;
+      }
+      const task = data.tasks.find((item) => item.id === currentDrag.id);
+      if (task) {
+        task.start = currentDrag.latestStart;
+        task.end = currentDrag.latestEnd;
+        task.projectId = currentDrag.latestProjectId;
+      }
+      saveData();
+      render();
     }
 
     function openModal(id) {
@@ -1502,6 +1579,13 @@
       if (bar) openTask(bar.dataset.taskId);
     });
 
+    barsEl.addEventListener("click", (event) => {
+      const deleteButton = event.target.closest("[data-delete-task]");
+      if (!deleteButton) return;
+      event.stopPropagation();
+      deleteTask(deleteButton.dataset.deleteTask);
+    });
+
     barsEl.addEventListener("contextmenu", (event) => {
       const bar = event.target.closest("[data-task-id]");
       if (!bar) return;
@@ -1510,6 +1594,7 @@
     });
 
     contextMenu.addEventListener("click", (event) => {
+      event.stopPropagation();
       const button = event.target.closest("[data-context-action]");
       if (!button || !contextTaskId) return;
       const task = data.tasks.find((item) => item.id === contextTaskId);
@@ -1537,6 +1622,7 @@
 
     barsEl.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
+      if (event.target.closest("button")) return;
       const bar = event.target.closest("[data-task-id]");
       if (!bar) return;
       const task = data.tasks.find((item) => item.id === bar.dataset.taskId);
@@ -1547,6 +1633,7 @@
       dragState = {
         id: task.id,
         bar,
+        pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
         originalStart: parseDate(task.start),
@@ -1584,31 +1671,13 @@
       dragState.bar.style.top = `${nextIndex * rowHeight() + 12}px`;
     });
 
-    window.addEventListener("pointerup", (event) => {
-      if (!dragState) return;
-      if (!dragState.moved) {
-        dragState.bar.classList.remove("is-dragging");
-        dragState = null;
-        return;
-      }
-      event.preventDefault();
-      const task = data.tasks.find((item) => item.id === dragState.id);
-      if (task) {
-        task.start = dragState.latestStart;
-        task.end = dragState.latestEnd;
-        task.projectId = dragState.latestProjectId;
-      }
-      saveData();
-      dragState = null;
-      render();
-    });
-
-    window.addEventListener("pointercancel", () => {
-      if (!dragState) return;
-      dragState.bar.classList.remove("is-dragging");
-      dragState = null;
-      render();
-    });
+    window.addEventListener("pointerup", finishDrag);
+    document.addEventListener("pointerup", finishDrag);
+    barsEl.addEventListener("pointerup", finishDrag);
+    window.addEventListener("mouseup", finishDrag);
+    window.addEventListener("pointercancel", (event) => finishDrag(event, { cancel: true }));
+    window.addEventListener("blur", (event) => finishDrag(event, { cancel: true }));
+    barsEl.addEventListener("lostpointercapture", finishDrag);
 
     document.getElementById("addProjectBtn").addEventListener("click", () => {
       const name = `Nuovo progetto ${data.projects.length + 1}`;
@@ -1719,28 +1788,9 @@
       const projectButton = event.target.closest("[data-delete-project]");
       const memberButton = event.target.closest("[data-delete-member]");
       const statusButton = event.target.closest("[data-delete-status]");
-      if (projectButton && data.projects.length > 1) {
-        const id = projectButton.dataset.deleteProject;
-        data.projects = data.projects.filter((project) => project.id !== id);
-        data.tasks = data.tasks.map((task) => task.projectId === id ? { ...task, projectId: data.projects[0].id } : task);
-      }
-      if (memberButton && data.members.length > 1) {
-        const name = memberButton.dataset.deleteMember;
-        data.members = data.members.filter((member) => member.name !== name);
-        data.tasks = data.tasks.map((task) => {
-          const members = (task.members || []).filter((member) => member !== name);
-          return { ...task, members: members.length ? members : [data.members[0]?.name].filter(Boolean) };
-        });
-      }
-      if (statusButton && data.statuses.length > 1) {
-        const name = statusButton.dataset.deleteStatus;
-        data.statuses = data.statuses.filter((status) => status.name !== name);
-        data.tasks = data.tasks.map((task) => task.status === name ? { ...task, status: data.statuses[0].name } : task);
-      }
-      if (projectButton || memberButton || statusButton) {
-        saveData();
-        render();
-      }
+      if (projectButton) deleteProject(projectButton.dataset.deleteProject);
+      if (memberButton) deleteMember(memberButton.dataset.deleteMember);
+      if (statusButton) deleteStatus(statusButton.dataset.deleteStatus);
     });
 
     document.getElementById("resetBtn").addEventListener("click", () => {
