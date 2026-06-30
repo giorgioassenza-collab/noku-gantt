@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
   <script>
     (() => {
-      const appVersion = "v13";
+      const appVersion = "v14";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -927,8 +927,8 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v13";
-    const legacyStorageKeys = ["noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const storageKey = "noku-gantt-data-v14";
+    const legacyStorageKeys = ["noku-gantt-data-v13", "noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1329,7 +1329,7 @@
         }).join("");
         const statusBadge = `<span class="bar-label" style="background:${status.color}">${escapeHtml(status.name)}</span>`;
         return `
-          <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(160, width)}px;border-color:${project.color}">
+          <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(44, width)}px;border-color:${project.color}">
             <span class="bar-title">${escapeHtml(task.name)}</span>
             ${subtaskBadge}
             ${memberBadges}
@@ -1883,6 +1883,8 @@
         startY: event.clientY,
         grabOffsetX: event.clientX - barRect.left,
         grabOffsetY: event.clientY - barRect.top,
+        startPointerDay: Math.floor(((event.clientX - barsRect.left) - 8) / dayWidth()),
+        startPointerProjectIndex: clamp(Math.floor((event.clientY - barsRect.top) / rowHeight()), 0, Math.max(0, projects.length - 1)),
         rangeStart: range.start,
         durationDays: diffDays(parseDate(task.end), parseDate(task.start)),
         originalStart: parseDate(task.start),
@@ -1912,10 +1914,12 @@
       dragState.bar.classList.add("is-dragging");
       event.preventDefault();
       const projects = visibleProjects();
-      const desiredLeft = event.clientX - dragState.barsLeft - dragState.grabOffsetX;
-      const desiredTop = event.clientY - dragState.barsTop - dragState.grabOffsetY;
-      const dayIndex = Math.max(0, Math.round((desiredLeft - 8) / dayWidth()));
-      const nextIndex = clamp(Math.floor((desiredTop + (rowHeight() / 2)) / rowHeight()), 0, Math.max(0, projects.length - 1));
+      const pointerDay = Math.floor(((event.clientX - dragState.barsLeft) - 8) / dayWidth());
+      const pointerTop = event.clientY - dragState.barsTop;
+      const dayDelta = pointerDay - dragState.startPointerDay;
+      const projectDelta = Math.floor(pointerTop / rowHeight()) - dragState.startPointerProjectIndex;
+      const dayIndex = Math.max(0, diffDays(dragState.originalStart, dragState.rangeStart) + dayDelta);
+      const nextIndex = clamp(dragState.originalProjectIndex + projectDelta, 0, Math.max(0, projects.length - 1));
       const nextProject = projects[nextIndex];
       const nextStart = addDays(dragState.rangeStart, dayIndex);
       dragState.latestStart = iso(nextStart);
