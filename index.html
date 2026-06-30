@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
   <script>
     (() => {
-      const appVersion = "v9";
+      const appVersion = "v10";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -927,8 +927,8 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v9";
-    const legacyStorageKeys = ["noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const storageKey = "noku-gantt-data-v10";
+    const legacyStorageKeys = ["noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1032,18 +1032,21 @@
 
     function normalizeData(source) {
       const normalized = {
-        projects: Array.isArray(source.projects) && source.projects.length ? source.projects : structuredClone(starterData.projects),
+        projects: Array.isArray(source.projects) && source.projects.length ? source.projects.map(normalizeProject) : structuredClone(starterData.projects),
         members: Array.isArray(source.members) && source.members.length ? source.members.map(normalizeMember) : structuredClone(starterData.members),
-        statuses: Array.isArray(source.statuses) && source.statuses.length ? source.statuses : structuredClone(starterData.statuses),
+        statuses: Array.isArray(source.statuses) && source.statuses.length ? source.statuses.map(normalizeStatus) : structuredClone(starterData.statuses),
         tasks: Array.isArray(source.tasks) ? source.tasks : []
       };
       normalized.tasks = normalized.tasks.map((task) => ({
         ...task,
-        projectId: task.projectId || normalized.projects[0]?.id || "",
+        id: task.id || `task-${Math.random().toString(16).slice(2)}`,
+        name: task.name || "Nuovo task",
+        projectId: normalized.projects.some((project) => project.id === task.projectId) ? task.projectId : normalized.projects[0]?.id || "",
         members: Array.isArray(task.members) && task.members.length ? task.members : (task.member ? [task.member] : [normalized.members[0]?.name].filter(Boolean)),
         start: task.start || iso(today),
         end: task.hasEnd === false ? (task.start || iso(today)) : (task.end || task.start || iso(today)),
         hasEnd: task.hasEnd === true || Boolean(task.end && task.start && task.end !== task.start),
+        status: normalized.statuses.some((status) => status.name === task.status) ? task.status : normalized.statuses[0]?.name || "",
         notes: task.notes || "",
         subtasks: Array.isArray(task.subtasks) ? task.subtasks.map((subtask) => ({
           id: subtask.id || `sub-${Math.random().toString(16).slice(2)}`,
@@ -1054,11 +1057,29 @@
       return normalized;
     }
 
+    function normalizeProject(project, index = 0) {
+      const fallback = starterData.projects[index % starterData.projects.length];
+      const name = (typeof project === "string" ? project : project?.name || fallback.name).trim();
+      return {
+        id: project?.id || slug(name) || fallback.id,
+        name: name || fallback.name,
+        color: project?.color || fallback.color || colors[index % colors.length]
+      };
+    }
+
     function normalizeMember(member, index = 0) {
       if (typeof member === "string") return { name: member, color: colors[index % colors.length] };
       return {
         name: member?.name || `Team ${index + 1}`,
         color: member?.color || colors[index % colors.length]
+      };
+    }
+
+    function normalizeStatus(status, index = 0) {
+      if (typeof status === "string") return { name: status, color: colors[index % colors.length] };
+      return {
+        name: status?.name || starterData.statuses[index % starterData.statuses.length]?.name || `Status ${index + 1}`,
+        color: status?.color || starterData.statuses[index % starterData.statuses.length]?.color || colors[index % colors.length]
       };
     }
 
@@ -1593,7 +1614,7 @@
     }
 
     function initials(name) {
-      return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+      return String(name || "?").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
     }
 
     function slug(value) {
