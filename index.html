@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
   <script>
     (() => {
-      const appVersion = "v12";
+      const appVersion = "v13";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -927,8 +927,8 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v12";
-    const legacyStorageKeys = ["noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const storageKey = "noku-gantt-data-v13";
+    const legacyStorageKeys = ["noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1162,6 +1162,10 @@
     function clampZoom(value) {
       if (!Number.isFinite(value)) return 1;
       return Math.max(.35, Math.min(3, value));
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
     }
 
     function rowHeight() {
@@ -1864,6 +1868,12 @@
       const task = data.tasks.find((item) => item.id === bar.dataset.taskId);
       if (!task) return;
       hideContextMenu();
+      const barRect = bar.getBoundingClientRect();
+      const barsRect = barsEl.getBoundingClientRect();
+      const range = rangeForTasks();
+      const projects = visibleProjects();
+      const originalIndex = projects.findIndex((project) => project.id === task.projectId);
+      const safeOriginalIndex = originalIndex === -1 ? 0 : originalIndex;
       bar.setPointerCapture(event.pointerId);
       dragState = {
         id: task.id,
@@ -1871,11 +1881,19 @@
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
+        grabOffsetX: event.clientX - barRect.left,
+        grabOffsetY: event.clientY - barRect.top,
+        rangeStart: range.start,
+        durationDays: diffDays(parseDate(task.end), parseDate(task.start)),
         originalStart: parseDate(task.start),
         originalEnd: parseDate(task.end),
         originalProjectId: task.projectId,
+        originalProjectIndex: safeOriginalIndex,
         originalLeft: parseFloat(bar.style.left) || 0,
         originalTop: parseFloat(bar.style.top) || 0,
+        originalLaneOffset: Math.max(0, (parseFloat(bar.style.top) || 0) - (safeOriginalIndex * rowHeight()) - 12),
+        barsLeft: barsRect.left,
+        barsTop: barsRect.top,
         moved: false,
         latestStart: task.start,
         latestEnd: task.end,
@@ -1893,18 +1911,18 @@
       dragState.moved = true;
       dragState.bar.classList.add("is-dragging");
       event.preventDefault();
-      const dayDelta = Math.round((event.clientX - dragState.startX) / dayWidth());
       const projects = visibleProjects();
-      const projectDelta = Math.round((event.clientY - dragState.startY) / rowHeight());
-      const originalIndex = projects.findIndex((project) => project.id === dragState.originalProjectId);
-      const safeOriginalIndex = originalIndex === -1 ? 0 : originalIndex;
-      const nextIndex = Math.max(0, Math.min(projects.length - 1, safeOriginalIndex + projectDelta));
+      const desiredLeft = event.clientX - dragState.barsLeft - dragState.grabOffsetX;
+      const desiredTop = event.clientY - dragState.barsTop - dragState.grabOffsetY;
+      const dayIndex = Math.max(0, Math.round((desiredLeft - 8) / dayWidth()));
+      const nextIndex = clamp(Math.floor((desiredTop + (rowHeight() / 2)) / rowHeight()), 0, Math.max(0, projects.length - 1));
       const nextProject = projects[nextIndex];
-      dragState.latestStart = iso(addDays(dragState.originalStart, dayDelta));
-      dragState.latestEnd = iso(addDays(dragState.originalEnd, dayDelta));
+      const nextStart = addDays(dragState.rangeStart, dayIndex);
+      dragState.latestStart = iso(nextStart);
+      dragState.latestEnd = iso(addDays(nextStart, dragState.durationDays));
       dragState.latestProjectId = nextProject?.id || dragState.originalProjectId;
-      dragState.bar.style.left = `${dragState.originalLeft + (dayDelta * dayWidth())}px`;
-      dragState.bar.style.top = `${nextIndex * rowHeight() + 12}px`;
+      dragState.bar.style.left = `${(dayIndex * dayWidth()) + 8}px`;
+      dragState.bar.style.top = `${nextIndex * rowHeight() + 12 + dragState.originalLaneOffset}px`;
     });
 
     window.addEventListener("pointerup", finishDrag);
