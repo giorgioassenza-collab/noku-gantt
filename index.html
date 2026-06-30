@@ -7,10 +7,10 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>NOku Gantt</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v15";
+      const appVersion = "v17";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -472,7 +472,7 @@
     }
 
     .bar-label {
-      max-width: 84px;
+      max-width: 150px;
       padding: 0 6px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -815,7 +815,7 @@
       <div class="tab">Gantt</div>
       <div class="spacer"></div>
       <div class="tool-group" aria-label="Controlli Gantt">
-        <select class="select" id="projectFilter" title="Filtro progetto"></select>
+        <select class="select" id="viewFilter" title="Vista"></select>
         <button class="icon-btn" id="undoBtn" title="Annulla ultima operazione" disabled>↶</button>
         <button class="text-btn" id="historyBtn" type="button">Cronologia</button>
         <button class="icon-btn" id="zoomOut" title="Riduci zoom">-</button>
@@ -970,9 +970,9 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v15";
-    const legacyStorageKeys = ["noku-gantt-data-v14", "noku-gantt-data-v13", "noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
-    const historyKey = "noku-gantt-history-v15";
+    const storageKey = "noku-gantt-data-v16";
+    const legacyStorageKeys = ["noku-gantt-data-v15", "noku-gantt-data-v14", "noku-gantt-data-v13", "noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const historyKey = "noku-gantt-history-v16";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1020,7 +1020,7 @@
     const barsEl = document.getElementById("bars");
     const gridEl = document.getElementById("grid");
     const weekendsEl = document.getElementById("weekends");
-    const projectFilter = document.getElementById("projectFilter");
+    const viewFilter = document.getElementById("viewFilter");
     const contextMenu = document.getElementById("contextMenu");
     const subtaskList = document.getElementById("subtaskList");
     const undoBtn = document.getElementById("undoBtn");
@@ -1220,7 +1220,7 @@
     function saveAndRefresh(options = {}) {
       saveData();
       renderFilters();
-      currentLaneLayout = buildLaneLayout(visibleProjects());
+      currentLaneLayout = buildLaneLayout(visibleProjects(), visibleTasks());
       document.documentElement.style.setProperty("--row", `${rowHeightForLanes(currentLaneLayout.maxLanes)}px`);
       renderRows();
       renderTimeline();
@@ -1309,7 +1309,7 @@
 
     function clampZoom(value) {
       if (!Number.isFinite(value)) return 1;
-      return Math.max(.35, Math.min(3, value));
+      return Math.max(.75, Math.min(3, value));
     }
 
     function clamp(value, min, max) {
@@ -1321,15 +1321,15 @@
     }
 
     function rowHeightForLanes(lanes) {
-      return Math.max(58, 18 + (Math.max(1, lanes) * 42));
+      return Math.max(58, 18 + (Math.max(2, lanes) * 42));
     }
 
-    function buildLaneLayout(projects) {
+    function buildLaneLayout(projects, tasks = visibleTasks()) {
       const taskLanes = new Map();
       let maxLanes = 1;
       projects.forEach((project) => {
         const lanes = [];
-        data.tasks
+        tasks
           .filter((task) => task.projectId === project.id)
           .sort((a, b) => parseDate(a.start) - parseDate(b.start) || parseDate(a.end) - parseDate(b.end))
           .forEach((task) => {
@@ -1349,8 +1349,8 @@
       return { taskLanes, maxLanes };
     }
 
-    function rangeForTasks() {
-      const taskDates = data.tasks.flatMap((task) => [parseDate(task.start), parseDate(task.end)]);
+    function rangeForTasks(tasks = visibleTasks()) {
+      const taskDates = tasks.flatMap((task) => [parseDate(task.start), parseDate(task.end)]);
       const min = taskDates.length ? new Date(Math.min(...taskDates)) : today;
       const max = taskDates.length ? new Date(Math.max(...taskDates)) : today;
       const start = new Date(min.getFullYear(), min.getMonth(), 1);
@@ -1361,15 +1361,32 @@
     }
 
     function visibleProjects() {
-      const selected = projectFilter.value;
-      if (selected && selected !== "all") return data.projects.filter((project) => project.id === selected);
       return data.projects;
+    }
+
+    function selectedMember() {
+      return viewFilter.value?.startsWith("member:")
+        ? viewFilter.value.slice("member:".length)
+        : "";
+    }
+
+    function visibleTasks() {
+      const member = selectedMember();
+      return member ? data.tasks.filter((task) => (task.members || []).includes(member)) : data.tasks;
+    }
+
+    function previewWidth(task, status) {
+      const title = String(task.name || "").length * 10;
+      const statusWidth = String(status?.name || "").length * 8 + 34;
+      const membersWidth = (task.members || []).reduce((total, member) => total + Math.min(108, String(member).length * 8 + 26), 0);
+      const subtaskWidth = task.subtasks?.length ? 42 : 0;
+      return Math.min(760, Math.max(160, title + statusWidth + membersWidth + subtaskWidth + 116));
     }
 
     function render() {
       applyZoom();
       renderFilters();
-      currentLaneLayout = buildLaneLayout(visibleProjects());
+      currentLaneLayout = buildLaneLayout(visibleProjects(), visibleTasks());
       document.documentElement.style.setProperty("--row", `${rowHeightForLanes(currentLaneLayout.maxLanes)}px`);
       renderRows();
       renderTimeline();
@@ -1384,9 +1401,13 @@
     }
 
     function renderFilters() {
-      const current = projectFilter.value || "all";
-      projectFilter.innerHTML = `<option value="all">Tutti i progetti</option>${data.projects.map((project) => `<option value="${project.id}">${escapeHtml(project.name)}</option>`).join("")}`;
-      projectFilter.value = data.projects.some((project) => project.id === current) ? current : "all";
+      const current = viewFilter.value || "overview";
+      const counts = data.members.map((member) => {
+        const count = data.tasks.filter((task) => (task.members || []).includes(member.name)).length;
+        return `<option value="member:${escapeAttr(member.name)}">${escapeHtml(member.name)} (${count})</option>`;
+      }).join("");
+      viewFilter.innerHTML = `<option value="overview">Overview</option>${counts}`;
+      viewFilter.value = current === "overview" || data.members.some((member) => `member:${member.name}` === current) ? current : "overview";
     }
 
     function renderRows() {
@@ -1399,7 +1420,7 @@
     }
 
     function renderTimeline() {
-      const range = rangeForTasks();
+      const range = rangeForTasks(visibleTasks());
       const width = range.totalDays * dayWidth();
       const height = visibleProjects().length * rowHeight();
       timeline.style.width = `${width}px`;
@@ -1459,7 +1480,7 @@
     function renderBars(range) {
       const projects = visibleProjects();
       const projectIds = projects.map((project) => project.id);
-      const tasks = data.tasks.filter((task) => projectIds.includes(task.projectId));
+      const tasks = visibleTasks().filter((task) => projectIds.includes(task.projectId));
       barsEl.style.height = `${projects.length * rowHeight()}px`;
       barsEl.innerHTML = tasks.map((task) => {
         const project = data.projects.find((item) => item.id === task.projectId) || data.projects[0];
@@ -1477,8 +1498,9 @@
           return `<span class="bar-member" style="background:${member?.color || "#fff"}">${escapeHtml(memberName)}</span>`;
         }).join("");
         const statusBadge = `<span class="bar-label" style="background:${status.color}">${escapeHtml(status.name)}</span>`;
+        const readableWidth = previewWidth(task, status);
         return `
-          <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(44, width)}px;border-color:${project.color}">
+          <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(44, width, readableWidth)}px;border-color:${project.color}">
             <span class="bar-title">${escapeHtml(task.name)}</span>
             ${subtaskBadge}
             ${memberBadges}
@@ -1986,12 +2008,12 @@
     });
 
     document.getElementById("todayBtn").addEventListener("click", () => {
-      const range = rangeForTasks();
+      const range = rangeForTasks(visibleTasks());
       const left = Math.max(0, diffDays(today, range.start) * dayWidth() - board.clientWidth / 2);
       board.scrollTo({ left, behavior: "smooth" });
     });
 
-    projectFilter.addEventListener("change", render);
+    viewFilter.addEventListener("change", render);
 
     barsEl.addEventListener("dblclick", (event) => {
       const bar = event.target.closest("[data-task-id]");
@@ -2030,7 +2052,7 @@
       hideContextMenu();
       const barRect = bar.getBoundingClientRect();
       const barsRect = barsEl.getBoundingClientRect();
-      const range = rangeForTasks();
+      const range = rangeForTasks(visibleTasks());
       const projects = visibleProjects();
       const originalIndex = projects.findIndex((project) => project.id === task.projectId);
       const safeOriginalIndex = originalIndex === -1 ? 0 : originalIndex;
