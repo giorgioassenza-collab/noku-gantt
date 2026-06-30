@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
   <script>
     (() => {
-      const appVersion = "v10";
+      const appVersion = "v11";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -927,8 +927,8 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v10";
-    const legacyStorageKeys = ["noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const storageKey = "noku-gantt-data-v11";
+    const legacyStorageKeys = ["noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -963,7 +963,7 @@
     };
 
     let data = loadData();
-    let zoom = clampZoom(Number(localStorage.getItem("noku-gantt-zoom") || 1));
+    let zoom = clampZoom(Number(safeStorageGet("noku-gantt-zoom") || 1));
     let dragState = null;
 
     const board = document.getElementById("board");
@@ -998,35 +998,39 @@
     }
 
     function migrateLegacyData() {
-      if (localStorage.getItem(storageKey)) return;
+      if (safeStorageGet(storageKey)) return;
       for (const key of legacyStorageKeys) {
         try {
-          const saved = JSON.parse(localStorage.getItem(key));
+          const saved = JSON.parse(safeStorageGet(key));
           if (saved && Array.isArray(saved.tasks)) {
-            localStorage.setItem(storageKey, JSON.stringify(normalizeData(saved)));
+            safeStorageSet(storageKey, JSON.stringify(normalizeData(saved)));
             break;
           }
         } catch (error) {
           console.warn(error);
         }
       }
-      legacyStorageKeys.forEach((key) => localStorage.removeItem(key));
+      legacyStorageKeys.forEach((key) => safeStorageRemove(key));
     }
 
     function loadData() {
-      migrateLegacyData();
       try {
-        const saved = JSON.parse(localStorage.getItem(storageKey));
+        migrateLegacyData();
+        const saved = JSON.parse(safeStorageGet(storageKey));
         if (saved && Array.isArray(saved.tasks)) {
           const normalized = normalizeData(saved);
-          localStorage.setItem(storageKey, JSON.stringify(normalized));
+          safeStorageSet(storageKey, JSON.stringify(normalized));
           return normalized;
         }
       } catch (error) {
         console.warn(error);
       }
+      return resetToStarterData();
+    }
+
+    function resetToStarterData() {
       const fresh = normalizeData(structuredClone(starterData));
-      localStorage.setItem(storageKey, JSON.stringify(fresh));
+      safeStorageSet(storageKey, JSON.stringify(fresh));
       return fresh;
     }
 
@@ -1083,8 +1087,33 @@
       };
     }
 
+    function safeStorageGet(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (error) {
+        console.warn(error);
+        return null;
+      }
+    }
+
+    function safeStorageSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    function safeStorageRemove(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
     function saveData() {
-      localStorage.setItem(storageKey, JSON.stringify(data));
+      safeStorageSet(storageKey, JSON.stringify(data));
     }
 
     function saveAndRefresh(options = {}) {
@@ -1744,7 +1773,7 @@
     document.getElementById("zoomIn").addEventListener("click", () => {
       const ratio = board.scrollLeft / Math.max(1, timeline.offsetWidth);
       zoom = clampZoom(Math.round((zoom + .25) * 100) / 100);
-      localStorage.setItem("noku-gantt-zoom", String(zoom));
+      safeStorageSet("noku-gantt-zoom", String(zoom));
       render();
       board.scrollLeft = ratio * timeline.offsetWidth;
     });
@@ -1752,7 +1781,7 @@
     document.getElementById("zoomOut").addEventListener("click", () => {
       const ratio = board.scrollLeft / Math.max(1, timeline.offsetWidth);
       zoom = clampZoom(Math.round((zoom - .25) * 100) / 100);
-      localStorage.setItem("noku-gantt-zoom", String(zoom));
+      safeStorageSet("noku-gantt-zoom", String(zoom));
       render();
       board.scrollLeft = ratio * timeline.offsetWidth;
     });
@@ -1977,7 +2006,13 @@
       render();
     });
 
-    render();
+    try {
+      render();
+    } catch (error) {
+      console.error(error);
+      data = resetToStarterData();
+      render();
+    }
     requestAnimationFrame(() => document.getElementById("todayBtn").click());
   </script>
 </body>
