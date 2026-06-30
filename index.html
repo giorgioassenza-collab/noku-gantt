@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
   <script>
     (() => {
-      const appVersion = "v11";
+      const appVersion = "v12";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -927,8 +927,8 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v11";
-    const legacyStorageKeys = ["noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const storageKey = "noku-gantt-data-v12";
+    const legacyStorageKeys = ["noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -965,6 +965,7 @@
     let data = loadData();
     let zoom = clampZoom(Number(safeStorageGet("noku-gantt-zoom") || 1));
     let dragState = null;
+    let currentLaneLayout = { taskLanes: new Map(), maxLanes: 1 };
 
     const board = document.getElementById("board");
     const timeline = document.getElementById("timeline");
@@ -1119,6 +1120,8 @@
     function saveAndRefresh(options = {}) {
       saveData();
       renderFilters();
+      currentLaneLayout = buildLaneLayout(visibleProjects());
+      document.documentElement.style.setProperty("--row", `${rowHeightForLanes(currentLaneLayout.maxLanes)}px`);
       renderRows();
       renderTimeline();
       renderFormOptions();
@@ -1165,6 +1168,35 @@
       return Number(getComputedStyle(document.documentElement).getPropertyValue("--row").replace("px", ""));
     }
 
+    function rowHeightForLanes(lanes) {
+      return Math.max(58, 18 + (Math.max(1, lanes) * 42));
+    }
+
+    function buildLaneLayout(projects) {
+      const taskLanes = new Map();
+      let maxLanes = 1;
+      projects.forEach((project) => {
+        const lanes = [];
+        data.tasks
+          .filter((task) => task.projectId === project.id)
+          .sort((a, b) => parseDate(a.start) - parseDate(b.start) || parseDate(a.end) - parseDate(b.end))
+          .forEach((task) => {
+            const start = parseDate(task.start);
+            const end = parseDate(task.end);
+            let laneIndex = lanes.findIndex((laneEnd) => diffDays(start, laneEnd) > 0);
+            if (laneIndex === -1) {
+              laneIndex = lanes.length;
+              lanes.push(end);
+            } else {
+              lanes[laneIndex] = end;
+            }
+            taskLanes.set(task.id, laneIndex);
+          });
+        maxLanes = Math.max(maxLanes, lanes.length || 1);
+      });
+      return { taskLanes, maxLanes };
+    }
+
     function rangeForTasks() {
       const taskDates = data.tasks.flatMap((task) => [parseDate(task.start), parseDate(task.end)]);
       const min = taskDates.length ? new Date(Math.min(...taskDates)) : today;
@@ -1185,6 +1217,8 @@
     function render() {
       applyZoom();
       renderFilters();
+      currentLaneLayout = buildLaneLayout(visibleProjects());
+      document.documentElement.style.setProperty("--row", `${rowHeightForLanes(currentLaneLayout.maxLanes)}px`);
       renderRows();
       renderTimeline();
       renderFormOptions();
@@ -1278,7 +1312,8 @@
         const project = data.projects.find((item) => item.id === task.projectId) || data.projects[0];
         const status = data.statuses.find((item) => item.name === task.status) || data.statuses[0];
         const left = diffDays(parseDate(task.start), range.start) * dayWidth() + 8;
-        const top = projects.findIndex((item) => item.id === task.projectId) * rowHeight() + 12;
+        const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
+        const top = projects.findIndex((item) => item.id === task.projectId) * rowHeight() + 12 + (lane * 42);
         const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
         const done = task.done ? " is-done" : "";
         const subtasks = task.subtasks || [];
