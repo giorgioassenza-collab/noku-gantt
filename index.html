@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
   <script>
     (() => {
-      const appVersion = "v14";
+      const appVersion = "v15";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -652,6 +652,35 @@
       align-items: center;
     }
 
+    .history-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .history-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 2px solid var(--ink);
+      background: #fff;
+    }
+
+    .history-row strong {
+      display: block;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+
+    .history-row span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     select[multiple] {
       min-height: 96px;
     }
@@ -787,6 +816,8 @@
       <div class="spacer"></div>
       <div class="tool-group" aria-label="Controlli Gantt">
         <select class="select" id="projectFilter" title="Filtro progetto"></select>
+        <button class="icon-btn" id="undoBtn" title="Annulla ultima operazione" disabled>↶</button>
+        <button class="text-btn" id="historyBtn" type="button">Cronologia</button>
         <button class="icon-btn" id="zoomOut" title="Riduci zoom">-</button>
         <span class="zoom-label" id="zoomLabel">100%</span>
         <button class="icon-btn" id="zoomIn" title="Aumenta zoom">+</button>
@@ -917,6 +948,18 @@
     </section>
   </div>
 
+  <div class="modal-backdrop" id="historyModal" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+      <div class="modal-head">
+        <h2 id="historyTitle">Cronologia</h2>
+        <button class="icon-btn" data-close-modal title="Chiudi">x</button>
+      </div>
+      <div class="modal-body">
+        <div class="history-list" id="historyList"></div>
+      </div>
+    </section>
+  </div>
+
   <nav class="context-menu" id="contextMenu" aria-label="Azioni task">
     <button type="button" data-context-action="edit">Modifica <span>Enter</span></button>
     <button type="button" data-context-action="toggleDone">Completa / riapri <span>OK</span></button>
@@ -927,8 +970,9 @@
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v14";
-    const legacyStorageKeys = ["noku-gantt-data-v13", "noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const storageKey = "noku-gantt-data-v15";
+    const legacyStorageKeys = ["noku-gantt-data-v14", "noku-gantt-data-v13", "noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const historyKey = "noku-gantt-history-v15";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -963,9 +1007,11 @@
     };
 
     let data = loadData();
+    let lastSavedData = cloneData(data);
     let zoom = clampZoom(Number(safeStorageGet("noku-gantt-zoom") || 1));
     let dragState = null;
     let currentLaneLayout = { taskLanes: new Map(), maxLanes: 1 };
+    let history = loadHistory();
 
     const board = document.getElementById("board");
     const timeline = document.getElementById("timeline");
@@ -977,6 +1023,8 @@
     const projectFilter = document.getElementById("projectFilter");
     const contextMenu = document.getElementById("contextMenu");
     const subtaskList = document.getElementById("subtaskList");
+    const undoBtn = document.getElementById("undoBtn");
+    const historyList = document.getElementById("historyList");
     let contextTaskId = "";
 
     function taskSeed(name, projectId, member, startOffset, endOffset, status) {
@@ -1113,8 +1161,60 @@
       }
     }
 
-    function saveData() {
+    function cloneData(value) {
+      return normalizeData(structuredClone(value));
+    }
+
+    function dataSignature(value) {
+      return JSON.stringify(value);
+    }
+
+    function loadHistory() {
+      try {
+        const saved = JSON.parse(safeStorageGet(historyKey));
+        if (Array.isArray(saved)) {
+          return saved.filter((entry) => entry?.snapshot).slice(0, 10);
+        }
+      } catch (error) {
+        console.warn(error);
+      }
+      return [];
+    }
+
+    function saveHistory() {
+      safeStorageSet(historyKey, JSON.stringify(history.slice(0, 10)));
+      updateUndoButton();
+    }
+
+    function updateUndoButton() {
+      if (!undoBtn) return;
+      undoBtn.disabled = !history.length;
+      undoBtn.title = history.length ? `Annulla: ${history[0].label}` : "Nessuna operazione da annullare";
+    }
+
+    function pushHistory(label) {
+      const before = cloneData(lastSavedData);
+      if (dataSignature(before) === dataSignature(data)) return;
+      const now = Date.now();
+      const last = history[0];
+      if (label === "Modifica setup" && last && last.label === label && now - last.time < 1500) {
+        saveHistory();
+        return;
+      }
+      history.unshift({
+        id: `hist-${now}-${Math.random().toString(16).slice(2)}`,
+        label,
+        time: now,
+        snapshot: before
+      });
+      history = history.slice(0, 10);
+      saveHistory();
+    }
+
+    function saveData(label = "Modifica") {
+      pushHistory(label);
       safeStorageSet(storageKey, JSON.stringify(data));
+      lastSavedData = cloneData(data);
     }
 
     function saveAndRefresh(options = {}) {
@@ -1126,6 +1226,54 @@
       renderTimeline();
       renderFormOptions();
       if (options.settings !== false) renderSettings();
+    }
+
+    function formatHistoryTime(time) {
+      return new Date(time).toLocaleString("it-IT", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function renderHistory() {
+      updateUndoButton();
+      if (!historyList) return;
+      historyList.innerHTML = history.length ? history.map((entry, index) => `
+        <div class="history-row">
+          <div>
+            <strong>${escapeHtml(entry.label)}</strong>
+            <span>${formatHistoryTime(entry.time)} · ${entry.snapshot.tasks.length} task · ${entry.snapshot.projects.length} progetti</span>
+          </div>
+          <button class="text-btn" type="button" data-restore-history="${index}">Ripristina</button>
+        </div>
+      `).join("") : `<div class="empty">Nessuna modifica precedente salvata.</div>`;
+    }
+
+    function restoreHistory(index, options = {}) {
+      const entry = history[index];
+      if (!entry) return;
+      const current = cloneData(data);
+      data = cloneData(entry.snapshot);
+      history.splice(index, 1);
+      if (options.keepCurrent !== false && dataSignature(current) !== dataSignature(data)) {
+        history.unshift({
+          id: `hist-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          label: "Prima del ripristino",
+          time: Date.now(),
+          snapshot: current
+        });
+      }
+      history = history.slice(0, 10);
+      safeStorageSet(storageKey, JSON.stringify(data));
+      lastSavedData = cloneData(data);
+      saveHistory();
+      render();
+    }
+
+    function undoLastChange() {
+      restoreHistory(0, { keepCurrent: false });
     }
 
     function stripTime(date) {
@@ -1227,6 +1375,7 @@
       renderTimeline();
       renderFormOptions();
       renderSettings();
+      renderHistory();
     }
 
     function applyZoom() {
@@ -1463,14 +1612,14 @@
         end: iso(addDays(parseDate(task.end), 1))
       };
       data.tasks.push(copy);
-      saveData();
+      saveData("Duplica task");
       render();
     }
 
     function deleteTask(taskId) {
       if (!taskId) return;
       data.tasks = data.tasks.filter((task) => task.id !== taskId);
-      saveData();
+      saveData("Elimina task");
       closeModals();
       hideContextMenu();
       render();
@@ -1483,7 +1632,7 @@
         data.projects.push({ id: "nuovo-progetto", name: "Nuovo progetto", color: colors[0] });
       }
       data.tasks = data.tasks.map((task) => task.projectId === projectId ? { ...task, projectId: data.projects[0].id } : task);
-      saveData();
+      saveData("Elimina progetto");
       render();
     }
 
@@ -1497,7 +1646,7 @@
         const members = (task.members || []).filter((member) => member !== name);
         return { ...task, members: members.length ? members : [data.members[0].name] };
       });
-      saveData();
+      saveData("Elimina membro");
       render();
     }
 
@@ -1508,7 +1657,7 @@
         data.statuses.push({ name: "Status 1", color: colors[0] });
       }
       data.tasks = data.tasks.map((task) => task.status === name ? { ...task, status: data.statuses[0].name } : task);
-      saveData();
+      saveData("Elimina status");
       render();
     }
 
@@ -1525,7 +1674,7 @@
       }
       if (action === "toggleDone") {
         task.done = !task.done;
-        saveData();
+        saveData("Completa task");
         hideContextMenu();
         render();
         return;
@@ -1533,7 +1682,7 @@
       if (action === "addSubtask") {
         task.subtasks = task.subtasks || [];
         task.subtasks.push({ id: `sub-${Math.random().toString(16).slice(2)}`, title: "Nuovo sottotask", done: false });
-        saveData();
+        saveData("Aggiungi sottotask");
         hideContextMenu();
         render();
         openTask(task.id);
@@ -1664,7 +1813,7 @@
         task.end = currentDrag.latestEnd;
         task.projectId = currentDrag.latestProjectId;
       }
-      saveData();
+      saveData("Sposta task");
       render();
     }
 
@@ -1744,6 +1893,17 @@
 
     document.getElementById("addTaskBtn").addEventListener("click", () => openTask());
     document.getElementById("settingsBtn").addEventListener("click", () => openModal("settingsModal"));
+    document.getElementById("historyBtn").addEventListener("click", () => {
+      renderHistory();
+      openModal("historyModal");
+    });
+    undoBtn.addEventListener("click", undoLastChange);
+    historyList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-restore-history]");
+      if (!button) return;
+      restoreHistory(Number(button.dataset.restoreHistory));
+      closeModals();
+    });
     document.querySelectorAll("[data-close-modal]").forEach((button) => button.addEventListener("click", closeModals));
     document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
       backdrop.addEventListener("click", (event) => {
@@ -1800,7 +1960,7 @@
         subtasks: collectSubtasks()
       };
       data.tasks = data.tasks.some((task) => task.id === id) ? data.tasks.map((task) => task.id === id ? next : task) : [...data.tasks, next];
-      saveData();
+      saveData(document.getElementById("taskId").value ? "Modifica task" : "Crea task");
       closeModals();
       render();
     });
@@ -1940,19 +2100,19 @@
     document.getElementById("addProjectBtn").addEventListener("click", () => {
       const name = `Nuovo progetto ${data.projects.length + 1}`;
       data.projects.push({ id: slug(name), name, color: colors[data.projects.length % colors.length] });
-      saveData();
+      saveData("Aggiungi progetto");
       render();
     });
 
     document.getElementById("addMemberBtn").addEventListener("click", () => {
       data.members.push({ name: `Team ${data.members.length + 1}`, color: colors[data.members.length % colors.length] });
-      saveData();
+      saveData("Aggiungi membro");
       render();
     });
 
     document.getElementById("addStatusBtn").addEventListener("click", () => {
       data.statuses.push({ name: `Status ${data.statuses.length + 1}`, color: colors[data.statuses.length % colors.length] });
-      saveData();
+      saveData("Aggiungi status");
       render();
     });
 
@@ -1972,7 +2132,7 @@
         const project = data.projects.find((item) => item.id === colorInput.dataset.projectColor);
         if (project) project.color = colorInput.value;
       }
-      saveData();
+      saveData("Modifica setup");
       renderFilters();
       renderRows();
       renderFormOptions();
@@ -2005,7 +2165,7 @@
         const member = data.members.find((item) => item.name === colorInput.dataset.memberColor);
         if (member) member.color = colorInput.value;
       }
-      saveData();
+      saveData("Modifica setup");
       renderTimeline();
       renderFormOptions();
     });
@@ -2032,7 +2192,7 @@
         const status = data.statuses.find((item) => item.name === colorInput.dataset.statusColor);
         if (status) status.color = colorInput.value;
       }
-      saveData();
+      saveData("Modifica setup");
       renderFormOptions();
       renderTimeline();
     });
@@ -2059,7 +2219,7 @@
 
     document.getElementById("resetBtn").addEventListener("click", () => {
       data = normalizeData(structuredClone(starterData));
-      saveData();
+      saveData("Reset demo");
       render();
     });
 
