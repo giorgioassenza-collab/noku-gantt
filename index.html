@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v30";
+      const appVersion = "v31";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -37,7 +37,7 @@
       --day: 92px;
       --sidebar: 228px;
       --head: 78px;
-      --row: 58px;
+      --row: 44px;
       font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
     }
 
@@ -408,7 +408,7 @@
 
     .bar {
       position: absolute;
-      height: 34px;
+      height: 26px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -421,6 +421,11 @@
       user-select: none;
       touch-action: none;
       cursor: grab;
+    }
+
+    .bar.is-ooo {
+      cursor: default;
+      box-shadow: 3px 3px 0 var(--ink);
     }
 
     .bar.is-done {
@@ -945,6 +950,7 @@
         <button class="icon-btn" id="zoomIn" title="Aumenta zoom">+</button>
         <button class="text-btn" id="todayBtn">Oggi</button>
         <button class="text-btn" id="settingsBtn">Setup</button>
+        <button class="text-btn" id="addOooBtn">Aggiungi OOO</button>
         <button class="text-btn primary" id="addTaskBtn">Nuovo task</button>
       </div>
       <input id="importFile" type="file" accept="application/json,.json" hidden>
@@ -1064,6 +1070,42 @@
     </section>
   </div>
 
+  <div class="modal-backdrop" id="oooModal" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="oooTitle">
+      <div class="modal-head">
+        <h2 id="oooTitle">Aggiungi OOO</h2>
+        <button class="icon-btn" data-close-modal title="Chiudi">x</button>
+      </div>
+      <form class="modal-body" id="oooForm">
+        <div class="form-grid">
+          <div class="field">
+            <label for="oooMember">Membro</label>
+            <select id="oooMember" required></select>
+          </div>
+          <div class="field">
+            <label for="oooStart">Data</label>
+            <input id="oooStart" type="date" required>
+          </div>
+          <div class="field">
+            <label for="oooHasEnd">Durata</label>
+            <label class="check-line">
+              <input id="oooHasEnd" type="checkbox">
+              <span>Aggiungi data di fine</span>
+            </label>
+          </div>
+          <div class="field" id="oooEndField">
+            <label for="oooEnd">Fine</label>
+            <input id="oooEnd" type="date">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="text-btn" type="button" data-close-modal>Annulla</button>
+          <button class="text-btn primary" type="submit">Salva OOO</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <div class="modal-backdrop" id="historyModal" aria-hidden="true">
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
       <div class="modal-head">
@@ -1103,6 +1145,7 @@
     const backupKey = "noku-gantt-backups-v1";
     const revisionKey = "noku-gantt-revision-v1";
     const remoteBoardId = "noku-gantt";
+    const oooProjectId = "__ooo__";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1133,7 +1176,8 @@
         taskSeed("Piano editoriale", "content-engine", "Social", 5, 22, "In corso"),
         taskSeed("Setup campagne", "paid-media", "Media", 10, 24, "Review"),
         taskSeed("Shooting assets", "content-engine", "Production", 18, 30, "Backlog")
-      ]
+      ],
+      ooo: []
     };
 
     let data = loadData();
@@ -1257,7 +1301,8 @@
         projects: Array.isArray(source.projects) && source.projects.length ? source.projects.map(normalizeProject) : structuredClone(starterData.projects),
         members: Array.isArray(source.members) && source.members.length ? source.members.map(normalizeMember) : structuredClone(starterData.members),
         statuses: Array.isArray(source.statuses) && source.statuses.length ? source.statuses.map(normalizeStatus) : structuredClone(starterData.statuses),
-        tasks: Array.isArray(source.tasks) ? source.tasks : []
+        tasks: Array.isArray(source.tasks) ? source.tasks : [],
+        ooo: Array.isArray(source.ooo) ? source.ooo : []
       };
       normalized.tasks = normalized.tasks.map((task) => {
         const taskStatus = normalized.statuses.some((status) => status.name === task.status) ? task.status : normalized.statuses[0]?.name || "";
@@ -1282,6 +1327,18 @@
           })) : []
         };
       });
+      normalized.ooo = normalized.ooo.map((entry) => {
+        const memberName = normalized.members.some((member) => member.name === entry.member) ? entry.member : normalized.members[0]?.name || "";
+        const start = entry.start || iso(today);
+        const end = entry.hasEnd === false ? start : (entry.end || start);
+        return {
+          id: entry.id || `ooo-${Math.random().toString(16).slice(2)}`,
+          member: memberName,
+          start,
+          end,
+          hasEnd: entry.hasEnd === true || Boolean(end && start && end !== start)
+        };
+      }).filter((entry) => entry.member);
       return normalized;
     }
 
@@ -1556,7 +1613,7 @@
     function saveAndRefresh(options = {}) {
       saveData();
       renderFilters();
-      currentLaneLayout = buildLaneLayout(visibleProjects(), visibleTasks());
+      currentLaneLayout = buildLaneLayout(visibleRows(), visibleTimelineItems());
       document.documentElement.style.setProperty("--row", `${rowHeightForLanes(currentLaneLayout.maxLanes)}px`);
       renderRows();
       renderTimeline();
@@ -1661,7 +1718,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v30",
+        version: window.NOKU_APP_VERSION || "v31",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -1754,7 +1811,7 @@
     }
 
     function rowHeightForLanes(lanes) {
-      return Math.max(58, 18 + (Math.max(2, lanes) * 42));
+      return Math.max(42, 10 + (Math.max(1, lanes) * 32));
     }
 
     function buildLaneLayout(projects, tasks = visibleTasks()) {
@@ -1799,6 +1856,26 @@
       return data.projects;
     }
 
+    function visibleOoo() {
+      const member = selectedMember();
+      return member ? data.ooo.filter((entry) => entry.member === member) : data.ooo;
+    }
+
+    function visibleRows() {
+      const oooRows = visibleOoo().length ? [{ id: oooProjectId, name: "OOO", color: "#111111", textColor: "#ffffff", isOoo: true }] : [];
+      return [...oooRows, ...visibleProjects()];
+    }
+
+    function visibleTimelineItems() {
+      const oooItems = visibleOoo().map((entry) => ({
+        ...entry,
+        name: entry.member,
+        projectId: oooProjectId,
+        type: "ooo"
+      }));
+      return [...oooItems, ...visibleTasks()];
+    }
+
     function selectedMember() {
       return viewFilter.value?.startsWith("member:")
         ? viewFilter.value.slice("member:".length)
@@ -1831,10 +1908,10 @@
     }
 
     function requiredDayWidth() {
-      const widths = visibleTasks().map((task) => {
+      const widths = visibleTimelineItems().map((task) => {
         if (daysBetween(parseDate(task.start), parseDate(task.end)) !== 1) return 0;
         const status = data.statuses.find((item) => item.name === task.status) || data.statuses[0];
-        return previewWidth(task, status) + 16;
+        return task.type === "ooo" ? 110 : previewWidth(task, status) + 16;
       });
       return Math.max(0, ...widths);
     }
@@ -1842,7 +1919,7 @@
     function render() {
       applyZoom();
       renderFilters();
-      currentLaneLayout = buildLaneLayout(visibleProjects(), visibleTasks());
+      currentLaneLayout = buildLaneLayout(visibleRows(), visibleTimelineItems());
       document.documentElement.style.setProperty("--row", `${rowHeightForLanes(currentLaneLayout.maxLanes)}px`);
       renderRows();
       renderTimeline();
@@ -1871,7 +1948,7 @@
     }
 
     function renderRows() {
-      rowsEl.innerHTML = visibleProjects().map((project) => `
+      rowsEl.innerHTML = visibleRows().map((project) => `
         <div class="member-row">
           <span class="avatar" style="background:${project.color};color:${project.textColor || "#111111"}">${initials(project.name)}</span>
           <span>${escapeHtml(project.name)}</span>
@@ -1880,9 +1957,9 @@
     }
 
     function renderTimeline() {
-      const range = rangeForTasks(visibleTasks());
+      const range = rangeForTasks(visibleTimelineItems());
       const width = range.totalDays * dayWidth();
-      const height = visibleProjects().length * rowHeight();
+      const height = visibleRows().length * rowHeight();
       timeline.style.width = `${width}px`;
       timeline.style.height = `${height + 78}px`;
       gridEl.style.height = `${height}px`;
@@ -1938,7 +2015,7 @@
     }
 
     function scrollToToday(behavior = "auto") {
-      const range = rangeForTasks(visibleTasks());
+      const range = rangeForTasks(visibleTimelineItems());
       const left = Math.max(0, diffDays(today, range.start) * dayWidth() - board.clientWidth / 2);
       board.scrollTo({ left, behavior });
     }
@@ -1948,16 +2025,30 @@
     }
 
     function renderBars(range) {
-      const projects = visibleProjects();
-      const projectIds = projects.map((project) => project.id);
-      const tasks = visibleTasks().filter((task) => projectIds.includes(task.projectId));
-      barsEl.style.height = `${projects.length * rowHeight()}px`;
+      const rows = visibleRows();
+      const rowIds = rows.map((project) => project.id);
+      const tasks = visibleTimelineItems().filter((task) => rowIds.includes(task.projectId));
+      barsEl.style.height = `${rows.length * rowHeight()}px`;
       barsEl.innerHTML = tasks.map((task) => {
+        if (task.type === "ooo") {
+          const member = data.members.find((item) => item.name === task.member) || data.members[0];
+          const left = diffDays(parseDate(task.start), range.start) * dayWidth() + 8;
+          const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
+          const top = rows.findIndex((item) => item.id === oooProjectId) * rowHeight() + 8 + (lane * 32);
+          const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
+          const preview = [`OOO ${task.member}`, `${task.start}${task.end !== task.start ? ` - ${task.end}` : ""}`].join("\n");
+          return `
+            <div class="bar is-ooo" data-ooo-id="${task.id}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(74, width)}px;border-color:${member?.color || "#111111"};background:${member?.color || "#ffffff"};color:${member?.textColor || "#111111"}">
+              <span class="bar-title">${escapeHtml(task.member)}</span>
+              <button class="bar-delete" data-delete-ooo="${task.id}" type="button" title="Elimina OOO" onclick="window.nokuDeleteOoo(this.dataset.deleteOoo); return false;">x</button>
+            </div>
+          `;
+        }
         const project = data.projects.find((item) => item.id === task.projectId) || data.projects[0];
         const status = data.statuses.find((item) => item.name === task.status) || data.statuses[0];
         const left = diffDays(parseDate(task.start), range.start) * dayWidth() + 8;
         const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
-        const top = projects.findIndex((item) => item.id === task.projectId) * rowHeight() + 12 + (lane * 42);
+        const top = rows.findIndex((item) => item.id === task.projectId) * rowHeight() + 8 + (lane * 32);
         const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
         const done = isDoneStatus(task.status) ? " is-done" : "";
         const subtasks = task.subtasks || [];
@@ -2000,6 +2091,7 @@
         </label>
       `).join("");
       document.getElementById("taskStatus").innerHTML = data.statuses.map((status) => `<option value="${escapeHtml(status.name)}">${escapeHtml(status.name)}</option>`).join("");
+      document.getElementById("oooMember").innerHTML = data.members.map((member) => `<option value="${escapeAttr(member.name)}">${escapeHtml(member.name)}</option>`).join("");
     }
 
     function renderSettings() {
@@ -2058,6 +2150,26 @@
       const endField = document.getElementById("taskEndField");
       const startValue = document.getElementById("taskStart").value || iso(today);
       const endInput = document.getElementById("taskEnd");
+      endField.classList.toggle("is-hidden", !hasEnd);
+      endInput.required = hasEnd;
+      if (!hasEnd) endInput.value = startValue;
+      if (hasEnd && !endInput.value) endInput.value = startValue;
+    }
+
+    function openOooModal() {
+      document.getElementById("oooMember").value = data.members[0]?.name || "";
+      document.getElementById("oooStart").value = iso(today);
+      document.getElementById("oooHasEnd").checked = false;
+      document.getElementById("oooEnd").value = iso(today);
+      updateOooEndField();
+      openModal("oooModal");
+    }
+
+    function updateOooEndField() {
+      const hasEnd = document.getElementById("oooHasEnd").checked;
+      const endField = document.getElementById("oooEndField");
+      const startValue = document.getElementById("oooStart").value || iso(today);
+      const endInput = document.getElementById("oooEnd");
       endField.classList.toggle("is-hidden", !hasEnd);
       endInput.required = hasEnd;
       if (!hasEnd) endInput.value = startValue;
@@ -2162,6 +2274,13 @@
       render();
     }
 
+    function deleteOoo(oooId) {
+      if (!oooId) return;
+      data.ooo = data.ooo.filter((entry) => entry.id !== oooId);
+      saveData("Elimina OOO");
+      render();
+    }
+
     function deleteProject(projectId) {
       if (!projectId) return;
       data.projects = data.projects.filter((project) => project.id !== projectId);
@@ -2190,6 +2309,7 @@
           }))
         };
       });
+      data.ooo = data.ooo.filter((entry) => entry.member !== name);
       saveData("Elimina membro");
       render();
     }
@@ -2237,6 +2357,7 @@
 
     window.nokuContextAction = (action, taskId = contextTaskId) => runContextAction(action, taskId);
     window.nokuDeleteTask = (taskId) => deleteTask(taskId);
+    window.nokuDeleteOoo = (oooId) => deleteOoo(oooId);
     window.nokuDeleteProject = (projectId) => deleteProject(projectId);
     window.nokuDeleteMember = (name) => deleteMember(name);
     window.nokuDeleteStatus = (name) => deleteStatus(name);
@@ -2247,6 +2368,13 @@
           event?.preventDefault?.();
           event?.stopPropagation?.();
           deleteTask(button.dataset.deleteTask);
+        };
+      });
+      barsEl.querySelectorAll("[data-delete-ooo]").forEach((button) => {
+        button.onclick = (event) => {
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          deleteOoo(button.dataset.deleteOoo);
         };
       });
     }
@@ -2302,6 +2430,7 @@
             members: (subtask.members || []).map((memberName) => memberName === oldName ? nextName : memberName)
           }))
         }));
+        data.ooo = data.ooo.map((entry) => entry.member === oldName ? { ...entry, member: nextName } : entry);
         input.dataset.memberName = nextName;
         const row = input.closest(".settings-row");
         const rowColor = row.querySelector("[data-member-color]");
@@ -2449,6 +2578,7 @@
     document.addEventListener("click", runPrimaryButtonAction);
 
     document.getElementById("addTaskBtn").addEventListener("click", () => openTask());
+    document.getElementById("addOooBtn").addEventListener("click", openOooModal);
     document.getElementById("settingsBtn").addEventListener("click", () => openModal("settingsModal"));
     document.getElementById("historyBtn").addEventListener("click", () => {
       renderHistory();
@@ -2522,6 +2652,28 @@
     document.getElementById("taskStart").addEventListener("change", () => {
       if (!document.getElementById("taskHasEnd").checked) updateTaskEndField();
     });
+    document.getElementById("oooHasEnd").addEventListener("change", updateOooEndField);
+    document.getElementById("oooStart").addEventListener("change", () => {
+      if (!document.getElementById("oooHasEnd").checked) updateOooEndField();
+    });
+
+    document.getElementById("oooForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      let start = document.getElementById("oooStart").value;
+      const hasEnd = document.getElementById("oooHasEnd").checked;
+      let end = hasEnd ? document.getElementById("oooEnd").value : start;
+      if (parseDate(end) < parseDate(start)) [start, end] = [end, start];
+      data.ooo.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : `ooo-${Date.now()}`,
+        member: document.getElementById("oooMember").value,
+        start,
+        end,
+        hasEnd
+      });
+      saveData("Aggiungi OOO");
+      closeModals();
+      render();
+    });
 
     subtaskList.addEventListener("click", (event) => {
       const button = event.target.closest("[data-delete-subtask]");
@@ -2589,6 +2741,13 @@
     });
 
     barsEl.addEventListener("click", (event) => {
+      const oooButton = event.target.closest("[data-delete-ooo]");
+      if (oooButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteOoo(oooButton.dataset.deleteOoo);
+        return;
+      }
       const deleteButton = event.target.closest("[data-delete-task]");
       if (!deleteButton) return;
       event.preventDefault();
@@ -2772,6 +2931,7 @@
             members: (subtask.members || []).map((memberName) => memberName === oldName ? nextName : memberName)
           }))
         }));
+        data.ooo = data.ooo.map((entry) => entry.member === oldName ? { ...entry, member: nextName } : entry);
         input.dataset.memberName = nextName;
         const row = input.closest(".settings-row");
         const rowColor = row.querySelector("[data-member-color]");
