@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v34";
+      const appVersion = "v36";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -1118,6 +1118,7 @@
         <button class="icon-btn" data-close-modal title="Chiudi">x</button>
       </div>
       <form class="modal-body" id="oooForm">
+        <input type="hidden" id="oooId">
         <div class="form-grid">
           <div class="field">
             <label for="oooMember">Membro</label>
@@ -1247,6 +1248,7 @@
     const syncStatus = document.getElementById("syncStatus");
     const taskTooltip = document.getElementById("taskTooltip");
     let contextTaskId = "";
+    let contextOooId = "";
     let boardRef = null;
     let unsubscribeBoard = null;
     let remoteApi = null;
@@ -1771,7 +1773,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v34",
+        version: window.NOKU_APP_VERSION || "v36",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2096,7 +2098,6 @@
           return `
             <div class="bar is-ooo" data-ooo-id="${task.id}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(74, width)}px;border-color:${member?.color || "#111111"};background:${member?.color || "#ffffff"};color:${member?.textColor || "#111111"}">
               <span class="bar-title">${escapeHtml(task.member)}</span>
-              <button class="bar-delete" data-delete-ooo="${task.id}" type="button" title="Elimina OOO" onclick="window.nokuDeleteOoo(this.dataset.deleteOoo); return false;">x</button>
             </div>
           `;
         }
@@ -2221,11 +2222,14 @@
       if (hasEnd && !endInput.value) endInput.value = startValue;
     }
 
-    function openOooModal() {
-      document.getElementById("oooMember").value = data.members[0]?.name || "";
-      document.getElementById("oooStart").value = iso(today);
-      document.getElementById("oooHasEnd").checked = false;
-      document.getElementById("oooEnd").value = iso(today);
+    function openOooModal(oooId = "") {
+      const entry = data.ooo.find((item) => item.id === oooId);
+      document.getElementById("oooTitle").textContent = entry ? "Modifica OOO" : "Aggiungi OOO";
+      document.getElementById("oooId").value = entry?.id || "";
+      document.getElementById("oooMember").value = entry?.member || data.members[0]?.name || "";
+      document.getElementById("oooStart").value = entry?.start || iso(today);
+      document.getElementById("oooHasEnd").checked = Boolean(entry?.hasEnd);
+      document.getElementById("oooEnd").value = entry?.end || entry?.start || iso(today);
       updateOooEndField();
       openModal("oooModal");
     }
@@ -2268,6 +2272,7 @@
     function hideContextMenu() {
       contextMenu.classList.remove("open");
       contextTaskId = "";
+      contextOooId = "";
     }
 
     function hideTaskTooltip() {
@@ -2299,14 +2304,34 @@
       return `<button type="button" data-context-action="${action}" data-task-id="${escapeAttr(taskId)}" onclick="window.nokuContextAction('${action}', this.dataset.taskId); return false;">${label}${hint ? ` <span>${hint}</span>` : ""}</button>`;
     }
 
+    function oooContextButton(action, label, hint, oooId) {
+      return `<button type="button" data-context-action="${action}" data-ooo-id="${escapeAttr(oooId)}" onclick="window.nokuOooContextAction('${action}', this.dataset.oooId); return false;">${label}${hint ? ` <span>${hint}</span>` : ""}</button>`;
+    }
+
     function openContextMenu(taskId, x, y) {
       hideTaskTooltip();
+      contextOooId = "";
       contextTaskId = taskId;
       contextMenu.innerHTML = [
         contextButton("edit", "Modifica", "", taskId),
         contextButton("addSubtask", "Aggiungi sottotask", "+", taskId),
         contextButton("duplicate", "Duplica", "", taskId),
         contextButton("delete", "Elimina", "x", taskId)
+      ].join("");
+      contextMenu.classList.add("open");
+      const width = contextMenu.offsetWidth;
+      const height = contextMenu.offsetHeight;
+      contextMenu.style.left = `${Math.min(x, window.innerWidth - width - 10)}px`;
+      contextMenu.style.top = `${Math.min(y, window.innerHeight - height - 10)}px`;
+    }
+
+    function openOooContextMenu(oooId, x, y) {
+      hideTaskTooltip();
+      contextTaskId = "";
+      contextOooId = oooId;
+      contextMenu.innerHTML = [
+        oooContextButton("edit", "Modifica", "", oooId),
+        oooContextButton("delete", "Elimina", "x", oooId)
       ].join("");
       contextMenu.classList.add("open");
       const width = contextMenu.offsetWidth;
@@ -2343,6 +2368,8 @@
       if (!oooId) return;
       data.ooo = data.ooo.filter((entry) => entry.id !== oooId);
       saveData("Elimina OOO");
+      closeModals();
+      hideContextMenu();
       render();
     }
 
@@ -2420,7 +2447,24 @@
       }
     }
 
+    function runOooContextAction(action, oooId = contextOooId) {
+      const entry = data.ooo.find((item) => item.id === oooId);
+      if (!entry) {
+        hideContextMenu();
+        return;
+      }
+      if (action === "edit") {
+        hideContextMenu();
+        openOooModal(entry.id);
+        return;
+      }
+      if (action === "delete") {
+        deleteOoo(entry.id);
+      }
+    }
+
     window.nokuContextAction = (action, taskId = contextTaskId) => runContextAction(action, taskId);
+    window.nokuOooContextAction = (action, oooId = contextOooId) => runOooContextAction(action, oooId);
     window.nokuDeleteTask = (taskId) => deleteTask(taskId);
     window.nokuDeleteOoo = (oooId) => deleteOoo(oooId);
     window.nokuDeleteProject = (projectId) => deleteProject(projectId);
@@ -2730,18 +2774,20 @@
 
     document.getElementById("oooForm").addEventListener("submit", (event) => {
       event.preventDefault();
+      const id = document.getElementById("oooId").value || (crypto.randomUUID ? crypto.randomUUID() : `ooo-${Date.now()}`);
       let start = document.getElementById("oooStart").value;
       const hasEnd = document.getElementById("oooHasEnd").checked;
       let end = hasEnd ? document.getElementById("oooEnd").value : start;
       if (parseDate(end) < parseDate(start)) [start, end] = [end, start];
-      data.ooo.push({
-        id: crypto.randomUUID ? crypto.randomUUID() : `ooo-${Date.now()}`,
+      const next = {
+        id,
         member: document.getElementById("oooMember").value,
         start,
         end,
         hasEnd
-      });
-      saveData("Aggiungi OOO");
+      };
+      data.ooo = data.ooo.some((entry) => entry.id === id) ? data.ooo.map((entry) => entry.id === id ? next : entry) : [...data.ooo, next];
+      saveData(document.getElementById("oooId").value ? "Modifica OOO" : "Aggiungi OOO");
       closeModals();
       render();
     });
@@ -2827,6 +2873,12 @@
     });
 
     barsEl.addEventListener("contextmenu", (event) => {
+      const oooBar = event.target.closest("[data-ooo-id]");
+      if (oooBar) {
+        event.preventDefault();
+        openOooContextMenu(oooBar.dataset.oooId, event.clientX, event.clientY);
+        return;
+      }
       const bar = event.target.closest("[data-task-id]");
       if (!bar) return;
       event.preventDefault();
@@ -2853,7 +2905,12 @@
     contextMenu.addEventListener("click", (event) => {
       event.stopPropagation();
       const button = event.target.closest("[data-context-action]");
-      if (!button || !contextTaskId) return;
+      if (!button) return;
+      if (button.dataset.oooId || contextOooId) {
+        runOooContextAction(button.dataset.contextAction, button.dataset.oooId || contextOooId);
+        return;
+      }
+      if (!contextTaskId) return;
       runContextAction(button.dataset.contextAction, contextTaskId);
     });
 
