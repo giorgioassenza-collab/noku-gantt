@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v19";
+      const appVersion = "v20";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -654,7 +654,7 @@
 
     .settings-row {
       display: grid;
-      grid-template-columns: 1fr 48px 34px;
+      grid-template-columns: 1fr 48px 48px 34px;
       gap: 8px;
       align-items: center;
     }
@@ -1152,23 +1152,26 @@
       return {
         id: project?.id || slug(name) || fallback.id,
         name: name || fallback.name,
-        color: project?.color || fallback.color || colors[index % colors.length]
+        color: project?.color || fallback.color || colors[index % colors.length],
+        textColor: project?.textColor || fallback.textColor || "#111111"
       };
     }
 
     function normalizeMember(member, index = 0) {
-      if (typeof member === "string") return { name: member, color: colors[index % colors.length] };
+      if (typeof member === "string") return { name: member, color: colors[index % colors.length], textColor: "#111111" };
       return {
         name: member?.name || `Team ${index + 1}`,
-        color: member?.color || colors[index % colors.length]
+        color: member?.color || colors[index % colors.length],
+        textColor: member?.textColor || "#111111"
       };
     }
 
     function normalizeStatus(status, index = 0) {
-      if (typeof status === "string") return { name: status, color: colors[index % colors.length] };
+      if (typeof status === "string") return { name: status, color: colors[index % colors.length], textColor: "#111111" };
       return {
         name: status?.name || starterData.statuses[index % starterData.statuses.length]?.name || `Status ${index + 1}`,
-        color: status?.color || starterData.statuses[index % starterData.statuses.length]?.color || colors[index % colors.length]
+        color: status?.color || starterData.statuses[index % starterData.statuses.length]?.color || colors[index % colors.length],
+        textColor: status?.textColor || starterData.statuses[index % starterData.statuses.length]?.textColor || "#111111"
       };
     }
 
@@ -1494,6 +1497,15 @@
       return Math.min(760, Math.max(160, title + statusWidth + membersWidth + subtaskWidth + 116));
     }
 
+    function requiredDayWidth() {
+      const widths = visibleTasks().map((task) => {
+        if (daysBetween(parseDate(task.start), parseDate(task.end)) !== 1) return 0;
+        const status = data.statuses.find((item) => item.name === task.status) || data.statuses[0];
+        return previewWidth(task, status) + 16;
+      });
+      return Math.max(0, ...widths);
+    }
+
     function render() {
       applyZoom();
       renderFilters();
@@ -1507,7 +1519,8 @@
     }
 
     function applyZoom() {
-      document.documentElement.style.setProperty("--day", `${Math.round(92 * zoom)}px`);
+      const baseWidth = Math.round(92 * zoom);
+      document.documentElement.style.setProperty("--day", `${Math.max(baseWidth, requiredDayWidth())}px`);
       document.getElementById("zoomLabel").textContent = `${Math.round(zoom * 100)}%`;
     }
 
@@ -1524,7 +1537,7 @@
     function renderRows() {
       rowsEl.innerHTML = visibleProjects().map((project) => `
         <div class="member-row">
-          <span class="avatar" style="background:${project.color}">${initials(project.name)}</span>
+          <span class="avatar" style="background:${project.color};color:${project.textColor || "#111111"}">${initials(project.name)}</span>
           <span>${escapeHtml(project.name)}</span>
         </div>
       `).join("");
@@ -1606,12 +1619,11 @@
         const subtaskBadge = subtasks.length ? `<span class="bar-subtasks">${completedSubtasks}/${subtasks.length}</span>` : "";
         const memberBadges = (task.members || []).map((memberName) => {
           const member = data.members.find((item) => item.name === memberName);
-          return `<span class="bar-member" style="background:${member?.color || "#fff"}">${escapeHtml(memberName)}</span>`;
+          return `<span class="bar-member" style="background:${member?.color || "#fff"};color:${member?.textColor || "#111111"}">${escapeHtml(memberName)}</span>`;
         }).join("");
-        const statusBadge = `<span class="bar-label" style="background:${status.color}">${escapeHtml(status.name)}</span>`;
-        const readableWidth = previewWidth(task, status);
+        const statusBadge = `<span class="bar-label" style="background:${status.color};color:${status.textColor || "#111111"}">${escapeHtml(status.name)}</span>`;
         return `
-          <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(44, width, readableWidth)}px;border-color:${project.color}">
+          <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(44, width)}px;border-color:${project.color}">
             <span class="bar-title">${escapeHtml(task.name)}</span>
             ${subtaskBadge}
             ${memberBadges}
@@ -1639,6 +1651,7 @@
         <div class="settings-row">
           <input data-project-name="${project.id}" value="${escapeAttr(project.name)}">
           <input data-project-color="${project.id}" type="color" value="${project.color}">
+          <input data-project-text-color="${project.id}" type="color" value="${project.textColor || "#111111"}" title="Colore testo">
           <button class="icon-btn" data-delete-project="${project.id}" type="button" title="Elimina" onclick="window.nokuDeleteProject(this.dataset.deleteProject); return false;">x</button>
         </div>
       `).join("");
@@ -1647,6 +1660,7 @@
         <div class="settings-row">
           <input data-member-name="${escapeAttr(member.name)}" value="${escapeAttr(member.name)}">
           <input data-member-color="${escapeAttr(member.name)}" type="color" value="${member.color}">
+          <input data-member-text-color="${escapeAttr(member.name)}" type="color" value="${member.textColor || "#111111"}" title="Colore testo">
           <button class="icon-btn" data-delete-member="${escapeAttr(member.name)}" type="button" title="Elimina" onclick="window.nokuDeleteMember(this.dataset.deleteMember); return false;">x</button>
         </div>
       `).join("");
@@ -1655,6 +1669,7 @@
         <div class="settings-row">
           <input data-status-name="${escapeAttr(status.name)}" value="${escapeAttr(status.name)}">
           <input data-status-color="${escapeAttr(status.name)}" type="color" value="${status.color}">
+          <input data-status-text-color="${escapeAttr(status.name)}" type="color" value="${status.textColor || "#111111"}" title="Colore testo">
           <button class="icon-btn" data-delete-status="${escapeAttr(status.name)}" type="button" title="Elimina" onclick="window.nokuDeleteStatus(this.dataset.deleteStatus); return false;">x</button>
         </div>
       `).join("");
@@ -1887,6 +1902,10 @@
         const project = data.projects.find((item) => item.id === input.dataset.projectColor);
         if (project) project.color = input.value;
       });
+      document.querySelectorAll("[data-project-text-color]").forEach((input) => {
+        const project = data.projects.find((item) => item.id === input.dataset.projectTextColor);
+        if (project) project.textColor = input.value;
+      });
       document.querySelectorAll("[data-member-name]").forEach((input) => {
         const oldName = input.dataset.memberName;
         const nextName = input.value.trim();
@@ -1904,13 +1923,19 @@
         input.dataset.memberName = nextName;
         const row = input.closest(".settings-row");
         const rowColor = row.querySelector("[data-member-color]");
+        const rowTextColor = row.querySelector("[data-member-text-color]");
         const rowDelete = row.querySelector("[data-delete-member]");
         if (rowColor) rowColor.dataset.memberColor = nextName;
+        if (rowTextColor) rowTextColor.dataset.memberTextColor = nextName;
         if (rowDelete) rowDelete.dataset.deleteMember = nextName;
       });
       document.querySelectorAll("[data-member-color]").forEach((input) => {
         const member = data.members.find((item) => item.name === input.dataset.memberColor);
         if (member) member.color = input.value;
+      });
+      document.querySelectorAll("[data-member-text-color]").forEach((input) => {
+        const member = data.members.find((item) => item.name === input.dataset.memberTextColor);
+        if (member) member.textColor = input.value;
       });
       document.querySelectorAll("[data-status-name]").forEach((input) => {
         const oldName = input.dataset.statusName;
@@ -1922,13 +1947,19 @@
         input.dataset.statusName = nextName;
         const row = input.closest(".settings-row");
         const rowColor = row.querySelector("[data-status-color]");
+        const rowTextColor = row.querySelector("[data-status-text-color]");
         const rowDelete = row.querySelector("[data-delete-status]");
         if (rowColor) rowColor.dataset.statusColor = nextName;
+        if (rowTextColor) rowTextColor.dataset.statusTextColor = nextName;
         if (rowDelete) rowDelete.dataset.deleteStatus = nextName;
       });
       document.querySelectorAll("[data-status-color]").forEach((input) => {
         const status = data.statuses.find((item) => item.name === input.dataset.statusColor);
         if (status) status.color = input.value;
+      });
+      document.querySelectorAll("[data-status-text-color]").forEach((input) => {
+        const status = data.statuses.find((item) => item.name === input.dataset.statusTextColor);
+        if (status) status.textColor = input.value;
       });
       saveAndRefresh({ settings: false });
     }
@@ -2264,19 +2295,19 @@
 
     document.getElementById("addProjectBtn").addEventListener("click", () => {
       const name = `Nuovo progetto ${data.projects.length + 1}`;
-      data.projects.push({ id: slug(name), name, color: colors[data.projects.length % colors.length] });
+      data.projects.push({ id: slug(name), name, color: colors[data.projects.length % colors.length], textColor: "#111111" });
       saveData("Aggiungi progetto");
       render();
     });
 
     document.getElementById("addMemberBtn").addEventListener("click", () => {
-      data.members.push({ name: `Team ${data.members.length + 1}`, color: colors[data.members.length % colors.length] });
+      data.members.push({ name: `Team ${data.members.length + 1}`, color: colors[data.members.length % colors.length], textColor: "#111111" });
       saveData("Aggiungi membro");
       render();
     });
 
     document.getElementById("addStatusBtn").addEventListener("click", () => {
-      data.statuses.push({ name: `Status ${data.statuses.length + 1}`, color: colors[data.statuses.length % colors.length] });
+      data.statuses.push({ name: `Status ${data.statuses.length + 1}`, color: colors[data.statuses.length % colors.length], textColor: "#111111" });
       saveData("Aggiungi status");
       render();
     });
@@ -2289,6 +2320,7 @@
     document.getElementById("projectList").addEventListener("input", (event) => {
       const nameInput = event.target.closest("[data-project-name]");
       const colorInput = event.target.closest("[data-project-color]");
+      const textColorInput = event.target.closest("[data-project-text-color]");
       if (nameInput) {
         const project = data.projects.find((item) => item.id === nameInput.dataset.projectName);
         if (project && nameInput.value.trim()) project.name = nameInput.value.trim();
@@ -2296,6 +2328,10 @@
       if (colorInput) {
         const project = data.projects.find((item) => item.id === colorInput.dataset.projectColor);
         if (project) project.color = colorInput.value;
+      }
+      if (textColorInput) {
+        const project = data.projects.find((item) => item.id === textColorInput.dataset.projectTextColor);
+        if (project) project.textColor = textColorInput.value;
       }
       saveData("Modifica setup");
       renderFilters();
@@ -2309,6 +2345,7 @@
     document.getElementById("memberList").addEventListener("input", (event) => {
       const input = event.target.closest("[data-member-name]");
       const colorInput = event.target.closest("[data-member-color]");
+      const textColorInput = event.target.closest("[data-member-text-color]");
       if (input) {
         if (!input.value.trim()) return;
         const oldName = input.dataset.memberName;
@@ -2326,13 +2363,19 @@
         input.dataset.memberName = nextName;
         const row = input.closest(".settings-row");
         const rowColor = row.querySelector("[data-member-color]");
+        const rowTextColor = row.querySelector("[data-member-text-color]");
         const rowDelete = row.querySelector("[data-delete-member]");
         if (rowColor) rowColor.dataset.memberColor = nextName;
+        if (rowTextColor) rowTextColor.dataset.memberTextColor = nextName;
         if (rowDelete) rowDelete.dataset.deleteMember = nextName;
       }
       if (colorInput) {
         const member = data.members.find((item) => item.name === colorInput.dataset.memberColor);
         if (member) member.color = colorInput.value;
+      }
+      if (textColorInput) {
+        const member = data.members.find((item) => item.name === textColorInput.dataset.memberTextColor);
+        if (member) member.textColor = textColorInput.value;
       }
       saveData("Modifica setup");
       renderTimeline();
@@ -2344,6 +2387,7 @@
     document.getElementById("statusList").addEventListener("input", (event) => {
       const nameInput = event.target.closest("[data-status-name]");
       const colorInput = event.target.closest("[data-status-color]");
+      const textColorInput = event.target.closest("[data-status-text-color]");
       if (nameInput && nameInput.value.trim()) {
         const oldName = nameInput.dataset.statusName;
         const nextName = nameInput.value.trim();
@@ -2353,13 +2397,19 @@
         nameInput.dataset.statusName = nextName;
         const row = nameInput.closest(".settings-row");
         const rowColor = row.querySelector("[data-status-color]");
+        const rowTextColor = row.querySelector("[data-status-text-color]");
         const rowDelete = row.querySelector("[data-delete-status]");
         if (rowColor) rowColor.dataset.statusColor = nextName;
+        if (rowTextColor) rowTextColor.dataset.statusTextColor = nextName;
         if (rowDelete) rowDelete.dataset.deleteStatus = nextName;
       }
       if (colorInput) {
         const status = data.statuses.find((item) => item.name === colorInput.dataset.statusColor);
         if (status) status.color = colorInput.value;
+      }
+      if (textColorInput) {
+        const status = data.statuses.find((item) => item.name === textColorInput.dataset.statusTextColor);
+        if (status) status.textColor = textColorInput.value;
       }
       saveData("Modifica setup");
       renderFormOptions();
