@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v20";
+      const appVersion = "v21";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -825,6 +825,8 @@
         <select class="select" id="viewFilter" title="Vista"></select>
         <button class="icon-btn" id="undoBtn" title="Annulla ultima operazione" disabled>↶</button>
         <button class="text-btn" id="historyBtn" type="button">Cronologia</button>
+        <button class="text-btn" id="exportBtn" type="button">Esporta dati</button>
+        <button class="text-btn" id="importBtn" type="button">Importa dati</button>
         <button class="icon-btn" id="zoomOut" title="Riduci zoom">-</button>
         <span class="zoom-label" id="zoomLabel">100%</span>
         <button class="icon-btn" id="zoomIn" title="Aumenta zoom">+</button>
@@ -832,6 +834,7 @@
         <button class="text-btn" id="settingsBtn">Setup</button>
         <button class="text-btn primary" id="addTaskBtn">Nuovo task</button>
       </div>
+      <input id="importFile" type="file" accept="application/json,.json" hidden>
     </header>
 
     <section class="board" id="board" aria-label="Tabella Gantt">
@@ -1384,6 +1387,54 @@
       saveBackup(label, data);
       lastSavedData = cloneData(data);
       render();
+    }
+
+    function exportData() {
+      const payload = {
+        app: "noku-gantt",
+        exportedAt: new Date().toISOString(),
+        version: "v21",
+        data: normalizeData(cloneData(data)),
+        history: history.slice(0, 10),
+        backups: loadBackups().slice(0, 20)
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `noku-gantt-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function importDataFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || "{}"));
+          const imported = parsed.data && Array.isArray(parsed.data.tasks) ? parsed.data : parsed;
+          if (!imported || !Array.isArray(imported.tasks)) {
+            window.alert("Il file non sembra un backup valido di NOku Gantt.");
+            return;
+          }
+          restoreSnapshot(imported, "Import backup JSON");
+          if (Array.isArray(parsed.history)) {
+            history = parsed.history.filter((entry) => entry?.snapshot).slice(0, 10);
+            saveHistory();
+          }
+          if (Array.isArray(parsed.backups)) {
+            safeStorageSet(backupKey, JSON.stringify(parsed.backups.filter((entry) => entry?.snapshot).slice(0, 20)));
+          }
+          render();
+        } catch (error) {
+          console.error(error);
+          window.alert("Non riesco a leggere questo backup JSON.");
+        }
+      });
+      reader.readAsText(file);
     }
 
     function undoLastChange() {
@@ -2072,6 +2123,12 @@
       renderHistory();
       openModal("historyModal");
     });
+    document.getElementById("exportBtn").addEventListener("click", exportData);
+    document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importFile").click());
+    document.getElementById("importFile").addEventListener("change", (event) => {
+      importDataFile(event.target.files?.[0]);
+      event.target.value = "";
+    });
     undoBtn.addEventListener("click", undoLastChange);
     historyList.addEventListener("click", (event) => {
       const historyButton = event.target.closest("[data-restore-history]");
@@ -2437,6 +2494,7 @@
     });
 
     document.getElementById("resetBtn").addEventListener("click", () => {
+      if (!window.confirm("Vuoi davvero sostituire i dati attuali con la demo? Prima verra salvato un backup automatico.")) return;
       data = normalizeData(structuredClone(starterData));
       saveData("Reset demo");
       render();
@@ -2446,8 +2504,10 @@
       render();
     } catch (error) {
       console.error(error);
-      data = resetToStarterData();
-      render();
+      const warning = document.createElement("div");
+      warning.className = "empty";
+      warning.textContent = "Errore di visualizzazione: i dati non sono stati modificati. Usa Esporta dati o Cronologia prima di ricaricare.";
+      document.body.appendChild(warning);
     }
     requestAnimationFrame(() => document.getElementById("todayBtn").click());
   </script>
