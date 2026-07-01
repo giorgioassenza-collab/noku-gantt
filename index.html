@@ -2479,13 +2479,6 @@
           deleteTask(button.dataset.deleteTask);
         };
       });
-      barsEl.querySelectorAll("[data-delete-ooo]").forEach((button) => {
-        button.onclick = (event) => {
-          event?.preventDefault?.();
-          event?.stopPropagation?.();
-          deleteOoo(button.dataset.deleteOoo);
-        };
-      });
     }
 
     function bindSettingsControls() {
@@ -2858,13 +2851,6 @@
     });
 
     barsEl.addEventListener("click", (event) => {
-      const oooButton = event.target.closest("[data-delete-ooo]");
-      if (oooButton) {
-        event.preventDefault();
-        event.stopPropagation();
-        deleteOoo(oooButton.dataset.deleteOoo);
-        return;
-      }
       const deleteButton = event.target.closest("[data-delete-task]");
       if (!deleteButton) return;
       event.preventDefault();
