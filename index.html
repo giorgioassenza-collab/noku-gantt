@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v22";
+      const appVersion = "v23";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -451,6 +451,14 @@
       flex: 0 0 auto;
     }
 
+    .bar-status-dot {
+      width: 13px;
+      height: 13px;
+      border: 2px solid var(--ink);
+      flex: 0 0 auto;
+      display: none;
+    }
+
     .bar-title {
       min-width: 0;
       overflow: hidden;
@@ -506,6 +514,37 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .is-compact-overview .bar {
+      height: 30px;
+      gap: 5px;
+      padding: 0 7px;
+      border-width: 2px;
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .is-compact-overview .bar-title {
+      font-size: 11px;
+      flex: 1 1 auto;
+      min-width: 36px;
+    }
+
+    .is-compact-overview .bar-subtasks,
+    .is-compact-overview .bar-label,
+    .is-compact-overview .bar-delete {
+      display: none;
+    }
+
+    .is-compact-overview .bar-status-dot {
+      display: inline-block;
+    }
+
+    .is-compact-overview .bar-member {
+      max-width: 56px;
+      height: 16px;
+      padding: 0 4px;
+      font-size: 9px;
     }
 
     .bar-delete {
@@ -1555,7 +1594,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v22",
+        version: window.NOKU_APP_VERSION || "v23",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -1636,7 +1675,7 @@
 
     function clampZoom(value) {
       if (!Number.isFinite(value)) return 1;
-      return Math.max(.75, Math.min(3, value));
+      return Math.max(.35, Math.min(3, value));
     }
 
     function clamp(value, min, max) {
@@ -1702,7 +1741,17 @@
       return member ? data.tasks.filter((task) => (task.members || []).includes(member)) : data.tasks;
     }
 
+    function isCompactOverview() {
+      return zoom <= .5;
+    }
+
     function previewWidth(task, status) {
+      if (isCompactOverview()) {
+        const title = Math.min(84, Math.max(42, String(task.name || "").length * 5));
+        const member = (task.members || [])[0] ? Math.min(56, String((task.members || [])[0]).length * 5 + 18) : 0;
+        const extra = (task.members || []).length > 1 ? 26 : 0;
+        return Math.max(96, title + member + extra + 30);
+      }
       const title = String(task.name || "").length * 10;
       const statusWidth = String(status?.name || "").length * 8 + 34;
       const membersWidth = (task.members || []).reduce((total, member) => total + Math.min(108, String(member).length * 8 + 26), 0);
@@ -1733,6 +1782,7 @@
 
     function applyZoom() {
       const baseWidth = Math.round(92 * zoom);
+      document.documentElement.classList.toggle("is-compact-overview", isCompactOverview());
       document.documentElement.style.setProperty("--day", `${Math.max(baseWidth, requiredDayWidth())}px`);
       document.getElementById("zoomLabel").textContent = `${Math.round(zoom * 100)}%`;
     }
@@ -1830,17 +1880,23 @@
         const subtasks = task.subtasks || [];
         const completedSubtasks = subtasks.filter((subtask) => subtask.done).length;
         const subtaskBadge = subtasks.length ? `<span class="bar-subtasks">${completedSubtasks}/${subtasks.length}</span>` : "";
-        const memberBadges = (task.members || []).map((memberName) => {
+        const compact = isCompactOverview();
+        const memberNames = compact ? (task.members || []).slice(0, 1) : (task.members || []);
+        const memberBadges = memberNames.map((memberName) => {
           const member = data.members.find((item) => item.name === memberName);
           return `<span class="bar-member" style="background:${member?.color || "#fff"};color:${member?.textColor || "#111111"}">${escapeHtml(memberName)}</span>`;
         }).join("");
+        const extraMembers = compact && (task.members || []).length > 1 ? `<span class="bar-member">+${(task.members || []).length - 1}</span>` : "";
         const statusBadge = `<span class="bar-label" style="background:${status.color};color:${status.textColor || "#111111"}">${escapeHtml(status.name)}</span>`;
+        const statusDot = `<span class="bar-status-dot" title="${escapeAttr(status.name)}" style="background:${status.color}"></span>`;
         return `
           <div class="bar${done}" data-task-id="${task.id}" style="left:${left}px;top:${top}px;width:${Math.max(44, width)}px;border-color:${project.color}">
             <span class="bar-title">${escapeHtml(task.name)}</span>
             ${subtaskBadge}
             ${memberBadges}
+            ${extraMembers}
             ${statusBadge}
+            ${statusDot}
             <button class="bar-delete" data-delete-task="${task.id}" type="button" title="Elimina task" onclick="window.nokuDeleteTask(this.dataset.deleteTask); return false;">x</button>
           </div>
         `;
