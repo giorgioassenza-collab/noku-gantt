@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v18";
+      const appVersion = "v19";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -970,8 +970,10 @@
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
     const storageKey = "noku-gantt-data-v16";
+    const stableStorageKey = "noku-gantt-data-current";
     const legacyStorageKeys = ["noku-gantt-data-v15", "noku-gantt-data-v14", "noku-gantt-data-v13", "noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const historyKey = "noku-gantt-history-v16";
+    const backupKey = "noku-gantt-backups-v1";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1011,6 +1013,7 @@
     let dragState = null;
     let currentLaneLayout = { taskLanes: new Map(), maxLanes: 1 };
     let history = loadHistory();
+    saveBackup("Apertura app", data);
 
     const board = document.getElementById("board");
     const timeline = document.getElementById("timeline");
@@ -1045,31 +1048,58 @@
       };
     }
 
-    function migrateLegacyData() {
-      if (safeStorageGet(storageKey)) return;
-      for (const key of legacyStorageKeys) {
+    function allDataKeys() {
+      const known = [stableStorageKey, storageKey, ...legacyStorageKeys];
+      try {
+        for (let index = 0; index < localStorage.length; index += 1) {
+          const key = localStorage.key(index);
+          if (key && key.startsWith("noku-gantt-data") && !known.includes(key)) known.push(key);
+        }
+      } catch (error) {
+        console.warn(error);
+      }
+      return known;
+    }
+
+    function dataScore(candidate) {
+      if (!candidate || !Array.isArray(candidate.tasks)) return -1;
+      const starterTaskNames = new Set(starterData.tasks.map((task) => task.name));
+      const starterProjectNames = new Set(starterData.projects.map((project) => project.name));
+      const starterMatches = candidate.tasks.filter((task) => starterTaskNames.has(task.name)).length;
+      const projectMatches = (candidate.projects || []).filter((project) => starterProjectNames.has(project.name)).length;
+      const looksStarter = starterMatches >= starterData.tasks.length - 1 && projectMatches >= starterData.projects.length - 1;
+      const customTasks = candidate.tasks.filter((task) => !starterTaskNames.has(task.name)).length;
+      return (candidate.tasks.length * 100) + ((candidate.projects || []).length * 20) + ((candidate.members || []).length * 10) + ((candidate.statuses || []).length * 10) + (customTasks * 250) + (looksStarter ? -500 : 500);
+    }
+
+    function dataCandidates() {
+      const candidates = [];
+      allDataKeys().forEach((key) => {
         try {
           const saved = JSON.parse(safeStorageGet(key));
           if (saved && Array.isArray(saved.tasks)) {
-            safeStorageSet(storageKey, JSON.stringify(normalizeData(saved)));
-            break;
+            candidates.push({ key, data: normalizeData(saved), score: dataScore(saved) });
           }
         } catch (error) {
           console.warn(error);
         }
-      }
-      legacyStorageKeys.forEach((key) => safeStorageRemove(key));
+      });
+      return candidates.sort((a, b) => b.score - a.score);
+    }
+
+    function migrateLegacyData() {
+      const best = dataCandidates()[0];
+      if (!best) return null;
+      const serialized = JSON.stringify(best.data);
+      safeStorageSet(storageKey, serialized);
+      safeStorageSet(stableStorageKey, serialized);
+      return best.data;
     }
 
     function loadData() {
       try {
-        migrateLegacyData();
-        const saved = JSON.parse(safeStorageGet(storageKey));
-        if (saved && Array.isArray(saved.tasks)) {
-          const normalized = normalizeData(saved);
-          safeStorageSet(storageKey, JSON.stringify(normalized));
-          return normalized;
-        }
+        const migrated = migrateLegacyData();
+        if (migrated) return migrated;
       } catch (error) {
         console.warn(error);
       }
@@ -1079,6 +1109,7 @@
     function resetToStarterData() {
       const fresh = normalizeData(structuredClone(starterData));
       safeStorageSet(storageKey, JSON.stringify(fresh));
+      safeStorageSet(stableStorageKey, JSON.stringify(fresh));
       return fresh;
     }
 
@@ -1190,6 +1221,33 @@
       return [];
     }
 
+    function loadBackups() {
+      try {
+        const saved = JSON.parse(safeStorageGet(backupKey));
+        if (Array.isArray(saved)) {
+          return saved.filter((entry) => entry?.snapshot).slice(0, 20);
+        }
+      } catch (error) {
+        console.warn(error);
+      }
+      return [];
+    }
+
+    function saveBackup(label, snapshot) {
+      if (!snapshot || !Array.isArray(snapshot.tasks)) return;
+      const normalized = normalizeData(cloneData(snapshot));
+      const backups = loadBackups();
+      const signature = dataSignature(normalized);
+      if (backups[0] && dataSignature(backups[0].snapshot) === signature) return;
+      backups.unshift({
+        id: `backup-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        label,
+        time: Date.now(),
+        snapshot: normalized
+      });
+      safeStorageSet(backupKey, JSON.stringify(backups.slice(0, 20)));
+    }
+
     function saveHistory() {
       safeStorageSet(historyKey, JSON.stringify(history.slice(0, 10)));
       updateUndoButton();
@@ -1221,8 +1279,11 @@
     }
 
     function saveData(label = "Modifica") {
+      saveBackup(`Prima di ${label}`, lastSavedData);
       pushHistory(label);
       safeStorageSet(storageKey, JSON.stringify(data));
+      safeStorageSet(stableStorageKey, JSON.stringify(data));
+      saveBackup(label, data);
       lastSavedData = cloneData(data);
     }
 
@@ -1249,7 +1310,9 @@
     function renderHistory() {
       updateUndoButton();
       if (!historyList) return;
-      historyList.innerHTML = history.length ? history.map((entry, index) => `
+      const backups = loadBackups();
+      const storedVersions = dataCandidates();
+      const historyHtml = history.length ? history.map((entry, index) => `
         <div class="history-row">
           <div>
             <strong>${escapeHtml(entry.label)}</strong>
@@ -1257,7 +1320,33 @@
           </div>
           <button class="text-btn" type="button" data-restore-history="${index}">Ripristina</button>
         </div>
-      `).join("") : `<div class="empty">Nessuna modifica precedente salvata.</div>`;
+      `).join("") : `<div class="history-row"><div><strong>Nessuna modifica precedente</strong><span>Da ora in poi le modifiche verranno archiviate automaticamente.</span></div></div>`;
+      const backupHtml = backups.length ? backups.map((entry, index) => `
+        <div class="history-row">
+          <div>
+            <strong>Backup · ${escapeHtml(entry.label)}</strong>
+            <span>${formatHistoryTime(entry.time)} · ${entry.snapshot.tasks.length} task · ${entry.snapshot.projects.length} progetti</span>
+          </div>
+          <button class="text-btn" type="button" data-restore-backup="${index}">Ripristina</button>
+        </div>
+      `).join("") : "";
+      const storedHtml = storedVersions.map((entry) => `
+        <div class="history-row">
+          <div>
+            <strong>Archivio browser · ${escapeHtml(entry.key)}</strong>
+            <span>${entry.data.tasks.length} task · ${entry.data.projects.length} progetti · punteggio ${entry.score}</span>
+          </div>
+          <button class="text-btn" type="button" data-restore-storage="${escapeAttr(entry.key)}">Ripristina</button>
+        </div>
+      `).join("");
+      historyList.innerHTML = `
+        <div class="settings-title"><h3>Ultime modifiche</h3></div>
+        ${historyHtml}
+        <div class="settings-title"><h3>Backup automatici</h3></div>
+        ${backupHtml || `<div class="history-row"><div><strong>Nessun backup ancora</strong><span>Il prossimo salvataggio ne creera uno.</span></div></div>`}
+        <div class="settings-title"><h3>Versioni salvate nel browser</h3></div>
+        ${storedHtml || `<div class="history-row"><div><strong>Nessuna versione trovata</strong><span>Non ci sono altri archivi locali disponibili.</span></div></div>`}
+      `;
     }
 
     function restoreHistory(index, options = {}) {
@@ -1276,8 +1365,21 @@
       }
       history = history.slice(0, 10);
       safeStorageSet(storageKey, JSON.stringify(data));
+      safeStorageSet(stableStorageKey, JSON.stringify(data));
+      saveBackup("Ripristino cronologia", data);
       lastSavedData = cloneData(data);
       saveHistory();
+      render();
+    }
+
+    function restoreSnapshot(snapshot, label = "Ripristino backup") {
+      if (!snapshot || !Array.isArray(snapshot.tasks)) return;
+      saveBackup("Prima del ripristino", data);
+      data = normalizeData(cloneData(snapshot));
+      safeStorageSet(storageKey, JSON.stringify(data));
+      safeStorageSet(stableStorageKey, JSON.stringify(data));
+      saveBackup(label, data);
+      lastSavedData = cloneData(data);
       render();
     }
 
@@ -1941,9 +2043,28 @@
     });
     undoBtn.addEventListener("click", undoLastChange);
     historyList.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-restore-history]");
-      if (!button) return;
-      restoreHistory(Number(button.dataset.restoreHistory));
+      const historyButton = event.target.closest("[data-restore-history]");
+      const backupButton = event.target.closest("[data-restore-backup]");
+      const storageButton = event.target.closest("[data-restore-storage]");
+      if (historyButton) {
+        restoreHistory(Number(historyButton.dataset.restoreHistory));
+        closeModals();
+        return;
+      }
+      if (backupButton) {
+        const backup = loadBackups()[Number(backupButton.dataset.restoreBackup)];
+        if (backup) restoreSnapshot(backup.snapshot, `Ripristino backup ${backup.label}`);
+        closeModals();
+        return;
+      }
+      if (storageButton) {
+        try {
+          const saved = JSON.parse(safeStorageGet(storageButton.dataset.restoreStorage));
+          restoreSnapshot(saved, `Ripristino ${storageButton.dataset.restoreStorage}`);
+        } catch (error) {
+          console.warn(error);
+        }
+      }
       closeModals();
     });
     document.querySelectorAll("[data-close-modal]").forEach((button) => button.addEventListener("click", closeModals));
