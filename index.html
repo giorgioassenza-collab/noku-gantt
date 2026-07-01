@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v17";
+      const appVersion = "v18";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -633,6 +633,13 @@
       accent-color: var(--accent);
     }
 
+    .member-picker {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      min-height: 42px;
+    }
+
     .modal-actions {
       display: flex;
       justify-content: flex-end;
@@ -695,7 +702,7 @@
 
     .subtask-row {
       display: grid;
-      grid-template-columns: 24px 1fr 34px;
+      grid-template-columns: 24px minmax(0, 1fr) minmax(120px, .7fr) 34px;
       gap: 8px;
       align-items: center;
     }
@@ -865,7 +872,7 @@
           </div>
           <div class="field">
             <label for="taskMembers">Membri</label>
-            <select id="taskMembers" multiple required></select>
+            <div class="member-picker" id="taskMembers"></div>
           </div>
           <div class="field">
             <label for="taskStart">Inizio</label>
@@ -885,13 +892,6 @@
           <div class="field">
             <label for="taskStatus">Status</label>
             <select id="taskStatus" required></select>
-          </div>
-          <div class="field">
-            <label for="taskDone">Completato</label>
-            <select id="taskDone">
-              <option value="false">No</option>
-              <option value="true">Si</option>
-            </select>
           </div>
           <div class="field full">
             <label for="taskNotes">Note</label>
@@ -961,10 +961,9 @@
   </div>
 
   <nav class="context-menu" id="contextMenu" aria-label="Azioni task">
-    <button type="button" data-context-action="edit">Modifica <span>Enter</span></button>
-    <button type="button" data-context-action="toggleDone">Completa / riapri <span>OK</span></button>
+    <button type="button" data-context-action="edit">Modifica</button>
     <button type="button" data-context-action="addSubtask">Aggiungi sottotask <span>+</span></button>
-    <button type="button" data-context-action="duplicate">Duplica <span>Copy</span></button>
+    <button type="button" data-context-action="duplicate">Duplica</button>
     <button type="button" data-context-action="delete">Elimina <span>x</span></button>
   </nav>
 
@@ -1090,23 +1089,29 @@
         statuses: Array.isArray(source.statuses) && source.statuses.length ? source.statuses.map(normalizeStatus) : structuredClone(starterData.statuses),
         tasks: Array.isArray(source.tasks) ? source.tasks : []
       };
-      normalized.tasks = normalized.tasks.map((task) => ({
-        ...task,
-        id: task.id || `task-${Math.random().toString(16).slice(2)}`,
-        name: task.name || "Nuovo task",
-        projectId: normalized.projects.some((project) => project.id === task.projectId) ? task.projectId : normalized.projects[0]?.id || "",
-        members: Array.isArray(task.members) && task.members.length ? task.members : (task.member ? [task.member] : [normalized.members[0]?.name].filter(Boolean)),
-        start: task.start || iso(today),
-        end: task.hasEnd === false ? (task.start || iso(today)) : (task.end || task.start || iso(today)),
-        hasEnd: task.hasEnd === true || Boolean(task.end && task.start && task.end !== task.start),
-        status: normalized.statuses.some((status) => status.name === task.status) ? task.status : normalized.statuses[0]?.name || "",
-        notes: task.notes || "",
-        subtasks: Array.isArray(task.subtasks) ? task.subtasks.map((subtask) => ({
-          id: subtask.id || `sub-${Math.random().toString(16).slice(2)}`,
-          title: subtask.title || subtask.name || "Sottotask",
-          done: Boolean(subtask.done)
-        })) : []
-      }));
+      normalized.tasks = normalized.tasks.map((task) => {
+        const taskStatus = normalized.statuses.some((status) => status.name === task.status) ? task.status : normalized.statuses[0]?.name || "";
+        const taskMembers = Array.isArray(task.members) && task.members.length ? task.members : (task.member ? [task.member] : [normalized.members[0]?.name].filter(Boolean));
+        return {
+          ...task,
+          id: task.id || `task-${Math.random().toString(16).slice(2)}`,
+          name: task.name || "Nuovo task",
+          projectId: normalized.projects.some((project) => project.id === task.projectId) ? task.projectId : normalized.projects[0]?.id || "",
+          members: taskMembers,
+          start: task.start || iso(today),
+          end: task.hasEnd === false ? (task.start || iso(today)) : (task.end || task.start || iso(today)),
+          hasEnd: task.hasEnd === true || Boolean(task.end && task.start && task.end !== task.start),
+          status: taskStatus,
+          done: isDoneStatus(taskStatus),
+          notes: task.notes || "",
+          subtasks: Array.isArray(task.subtasks) ? task.subtasks.map((subtask) => ({
+            id: subtask.id || `sub-${Math.random().toString(16).slice(2)}`,
+            title: subtask.title || subtask.name || "Sottotask",
+            done: Boolean(subtask.done),
+            members: Array.isArray(subtask.members) ? subtask.members : (subtask.member ? [subtask.member] : [])
+          })) : []
+        };
+      });
       return normalized;
     }
 
@@ -1134,6 +1139,10 @@
         name: status?.name || starterData.statuses[index % starterData.statuses.length]?.name || `Status ${index + 1}`,
         color: status?.color || starterData.statuses[index % starterData.statuses.length]?.color || colors[index % colors.length]
       };
+    }
+
+    function isDoneStatus(statusName) {
+      return /^(done|completat[oa]|chius[oa])$/i.test(String(statusName || "").trim());
     }
 
     function safeStorageGet(key) {
@@ -1489,7 +1498,7 @@
         const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
         const top = projects.findIndex((item) => item.id === task.projectId) * rowHeight() + 12 + (lane * 42);
         const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
-        const done = task.done ? " is-done" : "";
+        const done = isDoneStatus(task.status) ? " is-done" : "";
         const subtasks = task.subtasks || [];
         const completedSubtasks = subtasks.filter((subtask) => subtask.done).length;
         const subtaskBadge = subtasks.length ? `<span class="bar-subtasks">${completedSubtasks}/${subtasks.length}</span>` : "";
@@ -1514,7 +1523,12 @@
 
     function renderFormOptions() {
       document.getElementById("taskProject").innerHTML = data.projects.map((project) => `<option value="${project.id}">${escapeHtml(project.name)}</option>`).join("");
-      document.getElementById("taskMembers").innerHTML = data.members.map((member) => `<option value="${escapeHtml(member.name)}">${escapeHtml(member.name)}</option>`).join("");
+      document.getElementById("taskMembers").innerHTML = data.members.map((member) => `
+        <label class="check-line">
+          <input type="checkbox" data-task-member value="${escapeAttr(member.name)}">
+          <span>${escapeHtml(member.name)}</span>
+        </label>
+      `).join("");
       document.getElementById("taskStatus").innerHTML = data.statuses.map((status) => `<option value="${escapeHtml(status.name)}">${escapeHtml(status.name)}</option>`).join("");
     }
 
@@ -1552,15 +1566,14 @@
       document.getElementById("taskName").value = task?.name || "";
       document.getElementById("taskProject").value = task?.projectId || data.projects[0]?.id || "";
       const selectedMembers = task?.members || [data.members[0]?.name].filter(Boolean);
-      [...document.getElementById("taskMembers").options].forEach((option) => {
-        option.selected = selectedMembers.includes(option.value);
+      [...document.querySelectorAll("[data-task-member]")].forEach((input) => {
+        input.checked = selectedMembers.includes(input.value);
       });
       document.getElementById("taskStart").value = task?.start || iso(today);
       document.getElementById("taskHasEnd").checked = Boolean(task?.hasEnd);
       document.getElementById("taskEnd").value = task?.end || task?.start || iso(today);
       updateTaskEndField();
       document.getElementById("taskStatus").value = task?.status || data.statuses[0]?.name || "";
-      document.getElementById("taskDone").value = String(Boolean(task?.done));
       document.getElementById("taskNotes").value = task?.notes || "";
       renderSubtasks(task?.subtasks || []);
       document.getElementById("deleteTaskBtn").style.display = task ? "" : "none";
@@ -1583,6 +1596,9 @@
         <div class="subtask-row" data-subtask-id="${escapeAttr(subtask.id)}">
           <input type="checkbox" data-subtask-done ${subtask.done ? "checked" : ""} title="Completato">
           <input data-subtask-title value="${escapeAttr(subtask.title)}" placeholder="Nome sottotask">
+          <select data-subtask-members multiple title="Membri sottotask">
+            ${data.members.map((member) => `<option value="${escapeAttr(member.name)}" ${(subtask.members || []).includes(member.name) ? "selected" : ""}>${escapeHtml(member.name)}</option>`).join("")}
+          </select>
           <button class="icon-btn" data-delete-subtask title="Elimina">x</button>
         </div>
       `).join("");
@@ -1593,7 +1609,8 @@
         .map((row) => ({
           id: row.dataset.subtaskId || `sub-${Math.random().toString(16).slice(2)}`,
           title: row.querySelector("[data-subtask-title]").value.trim(),
-          done: row.querySelector("[data-subtask-done]").checked
+          done: row.querySelector("[data-subtask-done]").checked,
+          members: [...row.querySelector("[data-subtask-members]").selectedOptions].map((option) => option.value)
         }))
         .filter((subtask) => subtask.title);
     }
@@ -1604,16 +1621,15 @@
     }
 
     function contextButton(action, label, hint, taskId) {
-      return `<button type="button" data-context-action="${action}" data-task-id="${escapeAttr(taskId)}" onclick="window.nokuContextAction('${action}', this.dataset.taskId); return false;">${label} <span>${hint}</span></button>`;
+      return `<button type="button" data-context-action="${action}" data-task-id="${escapeAttr(taskId)}" onclick="window.nokuContextAction('${action}', this.dataset.taskId); return false;">${label}${hint ? ` <span>${hint}</span>` : ""}</button>`;
     }
 
     function openContextMenu(taskId, x, y) {
       contextTaskId = taskId;
       contextMenu.innerHTML = [
-        contextButton("edit", "Modifica", "Enter", taskId),
-        contextButton("toggleDone", "Completa / riapri", "OK", taskId),
+        contextButton("edit", "Modifica", "", taskId),
         contextButton("addSubtask", "Aggiungi sottotask", "+", taskId),
-        contextButton("duplicate", "Duplica", "Copy", taskId),
+        contextButton("duplicate", "Duplica", "", taskId),
         contextButton("delete", "Elimina", "x", taskId)
       ].join("");
       contextMenu.classList.add("open");
@@ -1629,7 +1645,7 @@
       const copy = {
         ...structuredClone(task),
         id: crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}`,
-        name: `${task.name} copy`,
+        name: task.name,
         start: iso(addDays(parseDate(task.start), 1)),
         end: iso(addDays(parseDate(task.end), 1))
       };
@@ -1666,7 +1682,14 @@
       }
       data.tasks = data.tasks.map((task) => {
         const members = (task.members || []).filter((member) => member !== name);
-        return { ...task, members: members.length ? members : [data.members[0].name] };
+        return {
+          ...task,
+          members: members.length ? members : [data.members[0].name],
+          subtasks: (task.subtasks || []).map((subtask) => ({
+            ...subtask,
+            members: (subtask.members || []).filter((member) => member !== name)
+          }))
+        };
       });
       saveData("Elimina membro");
       render();
@@ -1694,16 +1717,9 @@
         openTask(task.id);
         return;
       }
-      if (action === "toggleDone") {
-        task.done = !task.done;
-        saveData("Completa task");
-        hideContextMenu();
-        render();
-        return;
-      }
       if (action === "addSubtask") {
         task.subtasks = task.subtasks || [];
-        task.subtasks.push({ id: `sub-${Math.random().toString(16).slice(2)}`, title: "Nuovo sottotask", done: false });
+        task.subtasks.push({ id: `sub-${Math.random().toString(16).slice(2)}`, title: "Nuovo sottotask", done: false, members: [] });
         saveData("Aggiungi sottotask");
         hideContextMenu();
         render();
@@ -1777,7 +1793,11 @@
         member.name = nextName;
         data.tasks = data.tasks.map((task) => ({
           ...task,
-          members: (task.members || []).map((memberName) => memberName === oldName ? nextName : memberName)
+          members: (task.members || []).map((memberName) => memberName === oldName ? nextName : memberName),
+          subtasks: (task.subtasks || []).map((subtask) => ({
+            ...subtask,
+            members: (subtask.members || []).map((memberName) => memberName === oldName ? nextName : memberName)
+          }))
         }));
         input.dataset.memberName = nextName;
         const row = input.closest(".settings-row");
@@ -1944,7 +1964,7 @@
 
     document.getElementById("addSubtaskBtn").addEventListener("click", () => {
       const current = collectSubtasks();
-      current.push({ id: `sub-${Math.random().toString(16).slice(2)}`, title: "", done: false });
+      current.push({ id: `sub-${Math.random().toString(16).slice(2)}`, title: "", done: false, members: [] });
       renderSubtasks(current);
       const fields = subtaskList.querySelectorAll("[data-subtask-title]");
       fields[fields.length - 1]?.focus();
@@ -1968,16 +1988,18 @@
       const hasEnd = document.getElementById("taskHasEnd").checked;
       let end = hasEnd ? document.getElementById("taskEnd").value : start;
       if (parseDate(end) < parseDate(start)) [start, end] = [end, start];
+      const selectedTaskMembers = [...document.querySelectorAll("[data-task-member]:checked")].map((input) => input.value);
+      const selectedStatus = document.getElementById("taskStatus").value;
       const next = {
         id,
         name: document.getElementById("taskName").value.trim(),
         projectId: document.getElementById("taskProject").value,
-        members: [...document.getElementById("taskMembers").selectedOptions].map((option) => option.value),
+        members: selectedTaskMembers.length ? selectedTaskMembers : [data.members[0]?.name].filter(Boolean),
         start,
         end,
         hasEnd,
-        status: document.getElementById("taskStatus").value,
-        done: document.getElementById("taskDone").value === "true",
+        status: selectedStatus,
+        done: isDoneStatus(selectedStatus),
         notes: document.getElementById("taskNotes").value.trim(),
         subtasks: collectSubtasks()
       };
@@ -2174,7 +2196,11 @@
         if (member) member.name = nextName;
         data.tasks = data.tasks.map((task) => ({
           ...task,
-          members: (task.members || []).map((memberName) => memberName === oldName ? nextName : memberName)
+          members: (task.members || []).map((memberName) => memberName === oldName ? nextName : memberName),
+          subtasks: (task.subtasks || []).map((subtask) => ({
+            ...subtask,
+            members: (subtask.members || []).map((memberName) => memberName === oldName ? nextName : memberName)
+          }))
         }));
         input.dataset.memberName = nextName;
         const row = input.closest(".settings-row");
