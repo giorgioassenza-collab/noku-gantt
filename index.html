@@ -10,7 +10,8 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v21";
+      const appVersion = "v22";
+      window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -201,6 +202,26 @@
       font-family: Consolas, monospace;
       font-size: 12px;
       font-weight: 800;
+    }
+
+    .sync-status {
+      min-width: 86px;
+      padding: 7px 9px;
+      border: 2px solid var(--ink);
+      background: #fff;
+      box-shadow: 3px 3px 0 var(--accent);
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .sync-status.is-error {
+      background: #fff1f1;
+      color: #8c1111;
+      box-shadow: 3px 3px 0 #ff4f9a;
     }
 
     .board {
@@ -822,6 +843,7 @@
       <div class="tab">Gantt</div>
       <div class="spacer"></div>
       <div class="tool-group" aria-label="Controlli Gantt">
+        <span class="sync-status" id="syncStatus" title="Stato salvataggio">Locale</span>
         <select class="select" id="viewFilter" title="Vista"></select>
         <button class="icon-btn" id="undoBtn" title="Annulla ultima operazione" disabled>↶</button>
         <button class="text-btn" id="historyBtn" type="button">Cronologia</button>
@@ -970,13 +992,25 @@
     <button type="button" data-context-action="delete">Elimina <span>x</span></button>
   </nav>
 
-  <script>
+  <script type="module">
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCq4dqoSiAe-_mAVxBGOkuS8U54-xZgoNs",
+      authDomain: "o-tacos-gantt.firebaseapp.com",
+      projectId: "o-tacos-gantt",
+      storageBucket: "o-tacos-gantt.firebasestorage.app",
+      messagingSenderId: "255539789734",
+      appId: "1:255539789734:web:fe6d85009c029b61fdd967",
+      measurementId: "G-22GLYLHKKD"
+    };
+
     const DAY_MS = 24 * 60 * 60 * 1000;
     const storageKey = "noku-gantt-data-v16";
     const stableStorageKey = "noku-gantt-data-current";
     const legacyStorageKeys = ["noku-gantt-data-v15", "noku-gantt-data-v14", "noku-gantt-data-v13", "noku-gantt-data-v12", "noku-gantt-data-v11", "noku-gantt-data-v10", "noku-gantt-data-v9", "noku-gantt-data-v8", "noku-gantt-data-v7", "noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const historyKey = "noku-gantt-history-v16";
     const backupKey = "noku-gantt-backups-v1";
+    const revisionKey = "noku-gantt-revision-v1";
+    const remoteBoardId = "noku-gantt";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1030,7 +1064,16 @@
     const subtaskList = document.getElementById("subtaskList");
     const undoBtn = document.getElementById("undoBtn");
     const historyList = document.getElementById("historyList");
+    const syncStatus = document.getElementById("syncStatus");
     let contextTaskId = "";
+    let boardRef = null;
+    let unsubscribeBoard = null;
+    let remoteApi = null;
+    let saveQueue = Promise.resolve();
+    let remoteReady = false;
+    let applyingRemoteUpdate = false;
+    let pendingRemoteSave = false;
+    let dataRevision = Number(safeStorageGet(revisionKey) || 0);
 
     function taskSeed(name, projectId, member, startOffset, endOffset, status) {
       return {
@@ -1265,6 +1308,33 @@
       undoBtn.title = history.length ? `Annulla: ${history[0].label}` : "Nessuna operazione da annullare";
     }
 
+    function setSyncMessage(message, isError = false) {
+      if (!syncStatus) return;
+      syncStatus.textContent = message;
+      syncStatus.classList.toggle("is-error", Boolean(isError));
+      syncStatus.title = isError ? `Salvataggio condiviso: ${message}` : `Salvataggio condiviso: ${message}`;
+    }
+
+    function cleanForRemote(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function writeLocalSnapshot(snapshotData = data, snapshotHistory = history, revision = dataRevision) {
+      const normalized = normalizeData(snapshotData);
+      safeStorageSet(storageKey, JSON.stringify(normalized));
+      safeStorageSet(stableStorageKey, JSON.stringify(normalized));
+      safeStorageSet(historyKey, JSON.stringify((snapshotHistory || []).slice(0, 10)));
+      safeStorageSet(revisionKey, String(revision || 0));
+    }
+
+    function withTimeout(promise, milliseconds, label) {
+      let timer;
+      const timeout = new Promise((_, reject) => {
+        timer = window.setTimeout(() => reject(new Error(label || "Timeout")), milliseconds);
+      });
+      return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
+    }
+
     function pushHistory(label) {
       const before = cloneData(lastSavedData);
       if (dataSignature(before) === dataSignature(data)) return;
@@ -1284,13 +1354,108 @@
       saveHistory();
     }
 
+    async function startRemoteSync() {
+      setSyncMessage("Connessione...");
+      try {
+        const [{ initializeApp }, { getAuth, signInAnonymously }, firestore] = await withTimeout(Promise.all([
+          import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
+          import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
+          import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js")
+        ]), 8000, "Firebase non raggiungibile");
+        const { doc, getDoc, getFirestore, onSnapshot, serverTimestamp, setDoc } = firestore;
+        remoteApi = { serverTimestamp, setDoc };
+        const app = initializeApp(FIREBASE_CONFIG);
+        const auth = getAuth(app);
+        await withTimeout(signInAnonymously(auth), 8000, "Login Firebase non riuscito");
+        const db = getFirestore(app);
+        boardRef = doc(db, "boards", remoteBoardId);
+        const snapshot = await withTimeout(getDoc(boardRef), 8000, "Lettura Firebase non riuscita");
+        if (!snapshot.exists()) {
+          dataRevision = Math.max(Date.now(), dataRevision + 1);
+          await remoteApi.setDoc(boardRef, {
+            data: cleanForRemote(normalizeData(data)),
+            history: cleanForRemote(history.slice(0, 10)),
+            revision: dataRevision,
+            updatedAt: remoteApi.serverTimestamp()
+          });
+          writeLocalSnapshot(data, history, dataRevision);
+        } else {
+          applyRemoteDocument(snapshot.data(), true);
+        }
+        unsubscribeBoard = onSnapshot(boardRef, (remoteSnapshot) => {
+          if (!remoteSnapshot.exists() || applyingRemoteUpdate) return;
+          applyRemoteDocument(remoteSnapshot.data(), false);
+        }, (error) => {
+          console.error("Firestore snapshot failed", error);
+          setSyncMessage("Errore online", true);
+        });
+        remoteReady = true;
+        setSyncMessage("Online");
+        if (pendingRemoteSave) {
+          pendingRemoteSave = false;
+          queueRemoteSave("Sincronizza modifiche locali");
+        }
+      } catch (error) {
+        console.error("Firebase load failed", error);
+        remoteReady = false;
+        setSyncMessage("Solo locale", true);
+      }
+    }
+
+    function applyRemoteDocument(remoteDoc, force = false) {
+      const remoteRevision = Number(remoteDoc?.revision || 0);
+      if (!force && remoteRevision <= dataRevision) return;
+      const remoteData = remoteDoc?.data;
+      if (!remoteData || !Array.isArray(remoteData.tasks)) return;
+      data = normalizeData(remoteData);
+      history = Array.isArray(remoteDoc.history) ? remoteDoc.history.slice(0, 10) : history;
+      dataRevision = remoteRevision;
+      lastSavedData = cloneData(data);
+      writeLocalSnapshot(data, history, dataRevision);
+      saveBackup("Aggiornamento online", data);
+      render();
+      setSyncMessage("Online");
+    }
+
+    function queueRemoteSave(label = "Modifica") {
+      if (!boardRef || !remoteReady || !remoteApi) {
+        pendingRemoteSave = true;
+        setSyncMessage("In attesa", true);
+        return;
+      }
+      const snapshotData = cleanForRemote(normalizeData(data));
+      const snapshotHistory = cleanForRemote(history.slice(0, 10));
+      const nextRevision = Math.max(Date.now(), dataRevision + 1);
+      dataRevision = nextRevision;
+      writeLocalSnapshot(snapshotData, snapshotHistory, dataRevision);
+      saveQueue = saveQueue.catch(() => {}).then(async () => {
+        try {
+          setSyncMessage("Salvataggio...");
+          applyingRemoteUpdate = true;
+          await remoteApi.setDoc(boardRef, {
+            data: snapshotData,
+            history: snapshotHistory,
+            revision: nextRevision,
+            updatedAt: remoteApi.serverTimestamp()
+          }, { merge: true });
+          applyingRemoteUpdate = false;
+          setSyncMessage("Online");
+        } catch (error) {
+          applyingRemoteUpdate = false;
+          pendingRemoteSave = true;
+          console.error("Firestore save failed", error);
+          setSyncMessage("Errore save", true);
+        }
+      });
+    }
+
     function saveData(label = "Modifica") {
       saveBackup(`Prima di ${label}`, lastSavedData);
       pushHistory(label);
-      safeStorageSet(storageKey, JSON.stringify(data));
-      safeStorageSet(stableStorageKey, JSON.stringify(data));
+      writeLocalSnapshot(data, history, dataRevision);
       saveBackup(label, data);
       lastSavedData = cloneData(data);
+      queueRemoteSave(label);
     }
 
     function saveAndRefresh(options = {}) {
@@ -1370,11 +1535,10 @@
         });
       }
       history = history.slice(0, 10);
-      safeStorageSet(storageKey, JSON.stringify(data));
-      safeStorageSet(stableStorageKey, JSON.stringify(data));
       saveBackup("Ripristino cronologia", data);
       lastSavedData = cloneData(data);
       saveHistory();
+      queueRemoteSave("Ripristino cronologia");
       render();
     }
 
@@ -1382,10 +1546,8 @@
       if (!snapshot || !Array.isArray(snapshot.tasks)) return;
       saveBackup("Prima del ripristino", data);
       data = normalizeData(cloneData(snapshot));
-      safeStorageSet(storageKey, JSON.stringify(data));
-      safeStorageSet(stableStorageKey, JSON.stringify(data));
       saveBackup(label, data);
-      lastSavedData = cloneData(data);
+      saveData(label);
       render();
     }
 
@@ -1393,7 +1555,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: "v21",
+        version: window.NOKU_APP_VERSION || "v22",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2502,6 +2664,7 @@
 
     try {
       render();
+      startRemoteSync();
     } catch (error) {
       console.error(error);
       const warning = document.createElement("div");
