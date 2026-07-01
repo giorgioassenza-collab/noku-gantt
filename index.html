@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v25";
+      const appVersion = "v26";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -519,10 +519,9 @@
     .is-compact-overview .bar {
       height: 30px;
       gap: 5px;
-      padding: 0 7px;
+      padding: 0 22px 0 7px;
       border-width: 2px;
       box-shadow: 2px 2px 0 var(--ink);
-      overflow: visible;
     }
 
     .is-compact-overview .bar-title {
@@ -538,7 +537,11 @@
     }
 
     .is-compact-overview .bar-status-dot {
+      position: absolute;
+      right: 5px;
+      top: 50%;
       display: inline-block;
+      transform: translateY(-50%);
     }
 
     .is-compact-overview .bar-member {
@@ -548,51 +551,10 @@
       font-size: 9px;
     }
 
-    .is-compact-overview .bar:hover {
-      z-index: 80;
-    }
-
-    .is-compact-overview .bar:hover::before {
-      content: attr(data-preview);
-      position: absolute;
-      left: 0;
-      bottom: calc(100% + 9px);
-      width: max-content;
-      min-width: 180px;
-      max-width: 320px;
-      padding: 9px 10px;
-      border: 2px solid var(--ink);
-      background: #fff;
-      box-shadow: 4px 4px 0 var(--ink);
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 900;
-      line-height: 1.35;
-      text-transform: uppercase;
-      white-space: pre-line;
-      pointer-events: none;
-      z-index: 90;
-    }
-
-    .is-compact-overview .bar:hover::after {
-      content: "";
-      position: absolute;
-      left: 14px;
-      bottom: calc(100% + 2px);
-      width: 12px;
-      height: 12px;
-      border-right: 2px solid var(--ink);
-      border-bottom: 2px solid var(--ink);
-      background: #fff;
-      transform: rotate(45deg);
-      pointer-events: none;
-      z-index: 91;
-    }
-
     .is-ultra-overview .bar {
       height: 26px;
       gap: 4px;
-      padding: 0 5px;
+      padding: 0 18px 0 5px;
       box-shadow: 1px 1px 0 var(--ink);
     }
 
@@ -612,6 +574,31 @@
       width: 10px;
       height: 10px;
       border-width: 1px;
+    }
+
+    .task-tooltip {
+      position: fixed;
+      left: 0;
+      top: 0;
+      max-width: 320px;
+      padding: 9px 10px;
+      border: 2px solid var(--ink);
+      background: #fff;
+      box-shadow: 4px 4px 0 var(--ink);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.35;
+      text-transform: uppercase;
+      white-space: pre-line;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-9999px, -9999px);
+      z-index: 1000;
+    }
+
+    .task-tooltip.open {
+      opacity: 1;
     }
 
     .bar-delete {
@@ -1097,6 +1084,7 @@
     <button type="button" data-context-action="duplicate">Duplica</button>
     <button type="button" data-context-action="delete">Elimina <span>x</span></button>
   </nav>
+  <div class="task-tooltip" id="taskTooltip" role="tooltip"></div>
 
   <script type="module">
     const FIREBASE_CONFIG = {
@@ -1171,6 +1159,7 @@
     const undoBtn = document.getElementById("undoBtn");
     const historyList = document.getElementById("historyList");
     const syncStatus = document.getElementById("syncStatus");
+    const taskTooltip = document.getElementById("taskTooltip");
     let contextTaskId = "";
     let boardRef = null;
     let unsubscribeBoard = null;
@@ -1661,7 +1650,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v25",
+        version: window.NOKU_APP_VERSION || "v26",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -1966,7 +1955,7 @@
           `Status: ${status.name || "Nessuno"}`
         ].join("\n");
         return `
-          <div class="bar${done}" data-task-id="${task.id}" data-preview="${escapeAttr(preview)}" title="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(44, width)}px;border-color:${project.color}">
+          <div class="bar${done}" data-task-id="${task.id}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(44, width)}px;border-color:${project.color}">
             <span class="bar-title">${escapeHtml(task.name)}</span>
             ${subtaskBadge}
             ${memberBadges}
@@ -2082,11 +2071,37 @@
       contextTaskId = "";
     }
 
+    function hideTaskTooltip() {
+      if (!taskTooltip) return;
+      taskTooltip.classList.remove("open");
+      taskTooltip.textContent = "";
+      taskTooltip.style.transform = "translate(-9999px, -9999px)";
+    }
+
+    function moveTaskTooltip(event) {
+      if (!taskTooltip || !taskTooltip.classList.contains("open")) return;
+      const margin = 14;
+      const rect = taskTooltip.getBoundingClientRect();
+      let left = event.clientX + 14;
+      let top = event.clientY + 14;
+      if (left + rect.width + margin > window.innerWidth) left = event.clientX - rect.width - 14;
+      if (top + rect.height + margin > window.innerHeight) top = event.clientY - rect.height - 14;
+      taskTooltip.style.transform = `translate(${Math.max(margin, left)}px, ${Math.max(margin, top)}px)`;
+    }
+
+    function showTaskTooltip(event, bar) {
+      if (!taskTooltip || !isCompactOverview() || !bar?.dataset.preview) return;
+      taskTooltip.textContent = bar.dataset.preview;
+      taskTooltip.classList.add("open");
+      moveTaskTooltip(event);
+    }
+
     function contextButton(action, label, hint, taskId) {
       return `<button type="button" data-context-action="${action}" data-task-id="${escapeAttr(taskId)}" onclick="window.nokuContextAction('${action}', this.dataset.taskId); return false;">${label}${hint ? ` <span>${hint}</span>` : ""}</button>`;
     }
 
     function openContextMenu(taskId, x, y) {
+      hideTaskTooltip();
       contextTaskId = taskId;
       contextMenu.innerHTML = [
         contextButton("edit", "Modifica", "", taskId),
@@ -2560,6 +2575,23 @@
       openContextMenu(bar.dataset.taskId, event.clientX, event.clientY);
     });
 
+    barsEl.addEventListener("pointerover", (event) => {
+      const bar = event.target.closest("[data-task-id]");
+      if (!bar || !barsEl.contains(bar)) return;
+      showTaskTooltip(event, bar);
+    });
+
+    barsEl.addEventListener("pointermove", (event) => {
+      moveTaskTooltip(event);
+    });
+
+    barsEl.addEventListener("pointerout", (event) => {
+      const bar = event.target.closest("[data-task-id]");
+      if (!bar) return;
+      if (bar.contains(event.relatedTarget)) return;
+      hideTaskTooltip();
+    });
+
     contextMenu.addEventListener("click", (event) => {
       event.stopPropagation();
       const button = event.target.closest("[data-context-action]");
@@ -2574,6 +2606,7 @@
       if (!bar) return;
       const task = data.tasks.find((item) => item.id === bar.dataset.taskId);
       if (!task) return;
+      hideTaskTooltip();
       hideContextMenu();
       const barRect = bar.getBoundingClientRect();
       const barsRect = barsEl.getBoundingClientRect();
