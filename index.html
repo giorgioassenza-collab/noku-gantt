@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v38";
+      const appVersion = "v39";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -866,7 +866,7 @@
 
     .subtask-row {
       display: grid;
-      grid-template-columns: 24px minmax(0, 1fr) minmax(120px, .7fr) 132px 132px 34px;
+      grid-template-columns: 24px minmax(0, 1fr) minmax(120px, .7fr) 132px 120px 132px 34px;
       gap: 8px;
       align-items: center;
     }
@@ -876,6 +876,31 @@
       height: 22px;
       padding: 0;
       accent-color: var(--accent);
+    }
+
+    .subtask-end-toggle {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 2px solid var(--ink);
+      background: #fff;
+      padding: 7px 8px;
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .subtask-end-toggle input {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      accent-color: var(--accent);
+    }
+
+    .subtask-end-toggle.is-disabled + [data-subtask-end] {
+      display: none;
     }
 
     .context-menu {
@@ -1796,7 +1821,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v38",
+        version: window.NOKU_APP_VERSION || "v39",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2325,17 +2350,23 @@
             ${data.members.map((member) => `<option value="${escapeAttr(member.name)}" ${(subtask.members || []).includes(member.name) ? "selected" : ""}>${escapeHtml(member.name)}</option>`).join("")}
           </select>
           <input data-subtask-start type="date" value="${escapeAttr(subtask.start || "")}" title="Data sottotask">
-          <input data-subtask-end type="date" value="${escapeAttr(subtask.end || "")}" title="Fine sottotask">
+          <label class="subtask-end-toggle ${subtask.hasEnd ? "" : "is-disabled"}">
+            <input data-subtask-has-end type="checkbox" ${subtask.hasEnd ? "checked" : ""}>
+            <span>Data fine</span>
+          </label>
+          <input data-subtask-end type="date" value="${escapeAttr(subtask.end || subtask.start || "")}" title="Fine sottotask">
           <button class="icon-btn" data-delete-subtask title="Elimina">x</button>
         </div>
       `).join("");
+      subtaskList.querySelectorAll(".subtask-row").forEach(updateSubtaskEndField);
     }
 
     function collectSubtasks() {
       return [...subtaskList.querySelectorAll(".subtask-row")]
         .map((row) => {
           let start = row.querySelector("[data-subtask-start]").value;
-          let end = row.querySelector("[data-subtask-end]").value || start;
+          const hasEnd = row.querySelector("[data-subtask-has-end]").checked;
+          let end = hasEnd ? (row.querySelector("[data-subtask-end]").value || start) : start;
           if (start && end && parseDate(end) < parseDate(start)) [start, end] = [end, start];
           return {
             id: row.dataset.subtaskId || `sub-${Math.random().toString(16).slice(2)}`,
@@ -2344,10 +2375,24 @@
             members: [...row.querySelector("[data-subtask-members]").selectedOptions].map((option) => option.value),
             start,
             end: start ? end : "",
-            hasEnd: Boolean(start && end && end !== start)
+            hasEnd: Boolean(start && hasEnd && end !== start)
           };
         })
         .filter((subtask) => subtask.title);
+    }
+
+    function updateSubtaskEndField(row) {
+      const hasEndInput = row.querySelector("[data-subtask-has-end]");
+      const toggle = row.querySelector(".subtask-end-toggle");
+      const startInput = row.querySelector("[data-subtask-start]");
+      const endInput = row.querySelector("[data-subtask-end]");
+      const hasEnd = Boolean(hasEndInput?.checked);
+      toggle?.classList.toggle("is-disabled", !hasEnd);
+      if (endInput) {
+        endInput.required = hasEnd;
+        if (!hasEnd) endInput.value = startInput?.value || "";
+        if (hasEnd && !endInput.value) endInput.value = startInput?.value || "";
+      }
     }
 
     function hideContextMenu() {
@@ -2870,6 +2915,14 @@
       const button = event.target.closest("[data-delete-subtask]");
       if (!button) return;
       button.closest(".subtask-row").remove();
+    });
+
+    subtaskList.addEventListener("change", (event) => {
+      const row = event.target.closest(".subtask-row");
+      if (!row) return;
+      if (event.target.closest("[data-subtask-has-end], [data-subtask-start]")) {
+        updateSubtaskEndField(row);
+      }
     });
 
     document.getElementById("taskForm").addEventListener("submit", (event) => {
