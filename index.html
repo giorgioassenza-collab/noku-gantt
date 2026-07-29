@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v43";
+      const appVersion = "v44";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -1255,6 +1255,8 @@
     const backupKey = "noku-gantt-backups-v1";
     const revisionKey = "noku-gantt-revision-v1";
     const remoteBoardId = "noku-gantt";
+    const otacosBoardId = "default";
+    const otacosMirrorSource = "otacos";
     const oooProjectId = "__ooo__";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
@@ -1320,7 +1322,9 @@
     let contextSubtaskParentId = "";
     let contextSubtaskId = "";
     let boardRef = null;
+    let otacosBoardRef = null;
     let unsubscribeBoard = null;
+    let unsubscribeOtacosBoard = null;
     let remoteApi = null;
     let saveQueue = Promise.resolve();
     let remoteReady = false;
@@ -1328,6 +1332,7 @@
     let pendingRemoteSave = false;
     let dataRevision = Number(safeStorageGet(revisionKey) || 0);
     let hasRendered = false;
+    let lastOtacosRemoteData = null;
 
     function taskSeed(name, projectId, member, startOffset, endOffset, status) {
       return {
@@ -1618,6 +1623,78 @@
       return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
     }
 
+    function sameName(left, right) {
+      return String(left || "").trim().toLowerCase() === String(right || "").trim().toLowerCase();
+    }
+
+    function otacosProject() {
+      let project = data.projects.find((item) => sameName(item.name, "O'Tacos") || sameName(item.name, "O’Tacos") || sameName(item.name, "OTacos") || sameName(item.name, "O TACOS"));
+      if (!project) {
+        project = { id: "otacos", name: "O'Tacos", color: "#ff6b00", textColor: "#111111" };
+        data.projects = [project, ...data.projects];
+      }
+      return project;
+    }
+
+    function matchingMemberNames(sourceMembers = []) {
+      const sourceList = Array.isArray(sourceMembers) ? sourceMembers : [sourceMembers].filter(Boolean);
+      return data.members
+        .filter((member) => sourceList.some((name) => sameName(name, member.name)))
+        .map((member) => member.name);
+    }
+
+    function matchingStatusName(sourceStatus, existingStatus = "") {
+      const match = data.statuses.find((status) => sameName(status.name, sourceStatus));
+      if (match) return match.name;
+      if (existingStatus && data.statuses.some((status) => status.name === existingStatus)) return existingStatus;
+      return data.statuses[0]?.name || "";
+    }
+
+    function mirrorTaskId(sourceTaskId) {
+      return `${otacosMirrorSource}:${sourceTaskId}`;
+    }
+
+    function syncOtacosMirror(remoteData) {
+      if (remoteData) lastOtacosRemoteData = remoteData;
+      const sourceTasks = Array.isArray(remoteData?.tasks) ? remoteData.tasks : [];
+      const project = otacosProject();
+      const sourceIds = new Set();
+      const existingMirrorBySource = new Map(data.tasks
+        .filter((task) => task.mirrorSource === otacosMirrorSource)
+        .map((task) => [task.sourceTaskId, task]));
+      const mirrorTasks = sourceTasks
+        .filter((task) => task?.id && !task.creatorParentId)
+        .map((task) => {
+          sourceIds.add(task.id);
+          const existing = existingMirrorBySource.get(task.id);
+          const start = task.start || task.date || iso(today);
+          const end = task.end || start;
+          const members = matchingMemberNames(task.members || task.member || []);
+          return {
+            ...(existing || {}),
+            id: mirrorTaskId(task.id),
+            mirrorSource: otacosMirrorSource,
+            sourceTaskId: task.id,
+            name: task.nameEn || task.name || "Task O'Tacos",
+            projectId: project.id,
+            members: members.length ? members : (existing?.members || []),
+            start,
+            end,
+            hasEnd: Boolean(end && start && end !== start),
+            status: matchingStatusName(task.status, existing?.status),
+            done: isDoneStatus(task.status),
+            notes: task.info || task.notes || existing?.notes || "",
+            subtasks: []
+          };
+        });
+      const manualTasks = data.tasks.filter((task) => task.mirrorSource !== otacosMirrorSource);
+      data.tasks = [...manualTasks, ...mirrorTasks];
+      data = normalizeData(data);
+      lastSavedData = cloneData(data);
+      writeLocalSnapshot(data, history, dataRevision);
+      render();
+    }
+
     function pushHistory(label) {
       const before = cloneData(lastSavedData);
       if (dataSignature(before) === dataSignature(data)) return;
@@ -1652,6 +1729,7 @@
         await withTimeout(signInAnonymously(auth), 8000, "Login Firebase non riuscito");
         const db = getFirestore(app);
         boardRef = doc(db, "boards", remoteBoardId);
+        otacosBoardRef = doc(db, "boards", otacosBoardId);
         const snapshot = await withTimeout(getDoc(boardRef), 8000, "Lettura Firebase non riuscita");
         if (!snapshot.exists()) {
           dataRevision = Math.max(Date.now(), dataRevision + 1);
@@ -1672,6 +1750,12 @@
         }, (error) => {
           console.error("Firestore snapshot failed", error);
           setSyncMessage("Errore online", true);
+        });
+        unsubscribeOtacosBoard = onSnapshot(otacosBoardRef, (remoteSnapshot) => {
+          if (!remoteSnapshot.exists()) return;
+          syncOtacosMirror(remoteSnapshot.data()?.data);
+        }, (error) => {
+          console.error("O'Tacos mirror snapshot failed", error);
         });
         remoteReady = true;
         setSyncMessage("Online");
@@ -1697,7 +1781,11 @@
       lastSavedData = cloneData(data);
       writeLocalSnapshot(data, history, dataRevision);
       saveBackup("Aggiornamento online", data);
-      render();
+      if (lastOtacosRemoteData) {
+        syncOtacosMirror(lastOtacosRemoteData);
+      } else {
+        render();
+      }
       if (force) scheduleScrollToToday();
       setSyncMessage("Online");
     }
@@ -1851,7 +1939,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v43",
+        version: window.NOKU_APP_VERSION || "v44",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2696,6 +2784,7 @@
     window.nokuContextAction = (action, taskId = contextTaskId) => runContextAction(action, taskId);
     window.nokuOooContextAction = (action, oooId = contextOooId) => runOooContextAction(action, oooId);
     window.nokuSubtaskContextAction = (action, parentTaskId = contextSubtaskParentId, subtaskId = contextSubtaskId) => runSubtaskContextAction(action, parentTaskId, subtaskId);
+    window.nokuSyncOtacosMirror = (remoteData) => syncOtacosMirror(remoteData);
     window.nokuDeleteTask = (taskId) => deleteTask(taskId);
     window.nokuDeleteOoo = (oooId) => deleteOoo(oooId);
     window.nokuDeleteProject = (projectId) => deleteProject(projectId);
