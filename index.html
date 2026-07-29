@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v42";
+      const appVersion = "v43";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -459,7 +459,7 @@
     }
 
     .bar.is-subtask {
-      height: 22px;
+      height: 28px;
       padding: 0 8px;
       border-style: dashed;
       background: repeating-linear-gradient(135deg, #fff 0, #fff 6px, rgba(0, 0, 0, .06) 6px, rgba(0, 0, 0, .06) 12px);
@@ -471,6 +471,18 @@
       content: "SUB ";
       color: var(--muted);
       font-size: 10px;
+    }
+
+    .bar-parent {
+      max-width: 130px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 900;
+      line-height: 1;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .bar.is-done {
@@ -1305,6 +1317,8 @@
     const taskTooltip = document.getElementById("taskTooltip");
     let contextTaskId = "";
     let contextOooId = "";
+    let contextSubtaskParentId = "";
+    let contextSubtaskId = "";
     let boardRef = null;
     let unsubscribeBoard = null;
     let remoteApi = null;
@@ -1837,7 +1851,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v42",
+        version: window.NOKU_APP_VERSION || "v43",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2019,6 +2033,7 @@
           id: `subtask-${task.id}-${subtask.id}`,
           type: "subtask",
           parentTaskId: task.id,
+          subtaskId: subtask.id,
           projectId: task.projectId,
           name: subtask.title || "Sottotask",
           members: (subtask.members || []).length ? subtask.members : (task.members || []),
@@ -2202,13 +2217,15 @@
             const member = data.members.find((item) => item.name === memberName);
             return `<span class="bar-member" style="background:${member?.color || "#fff"};color:${member?.textColor || "#111111"}">${escapeHtml(memberName)}</span>`;
           }).join("");
+          const parentName = parent?.name || task.parentName || "";
           const preview = [
             task.name || "Sottotask",
-            `Task: ${parent?.name || task.parentName || ""}`
+            `Task: ${parentName}`
           ].join("\n");
           return `
-            <div class="bar is-subtask${task.done ? " is-done" : ""}" data-subtask-bar-id="${escapeAttr(task.id)}" data-parent-task-id="${escapeAttr(task.parentTaskId)}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(72, width)}px;border-color:${project.color}">
+            <div class="bar is-subtask${task.done ? " is-done" : ""}" data-subtask-bar-id="${escapeAttr(task.id)}" data-subtask-id="${escapeAttr(task.subtaskId)}" data-parent-task-id="${escapeAttr(task.parentTaskId)}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(92, width)}px;border-color:${project.color}">
               <span class="bar-title">${escapeHtml(task.name)}</span>
+              <span class="bar-parent">${escapeHtml(parentName)}</span>
               ${memberBadges}
             </div>
           `;
@@ -2426,6 +2443,8 @@
       contextMenu.classList.remove("open");
       contextTaskId = "";
       contextOooId = "";
+      contextSubtaskParentId = "";
+      contextSubtaskId = "";
     }
 
     function hideTaskTooltip() {
@@ -2461,9 +2480,15 @@
       return `<button type="button" data-context-action="${action}" data-ooo-id="${escapeAttr(oooId)}" onclick="window.nokuOooContextAction('${action}', this.dataset.oooId); return false;">${label}${hint ? ` <span>${hint}</span>` : ""}</button>`;
     }
 
+    function subtaskContextButton(action, label, hint, parentTaskId, subtaskId) {
+      return `<button type="button" data-context-action="${action}" data-parent-task-id="${escapeAttr(parentTaskId)}" data-subtask-id="${escapeAttr(subtaskId)}">${label}${hint ? ` <span>${hint}</span>` : ""}</button>`;
+    }
+
     function openContextMenu(taskId, x, y) {
       hideTaskTooltip();
       contextOooId = "";
+      contextSubtaskParentId = "";
+      contextSubtaskId = "";
       contextTaskId = taskId;
       contextMenu.innerHTML = [
         contextButton("edit", "Modifica", "", taskId),
@@ -2478,10 +2503,32 @@
       contextMenu.style.top = `${Math.min(y, window.innerHeight - height - 10)}px`;
     }
 
+    function openSubtaskContextMenu(parentTaskId, subtaskId, x, y) {
+      hideTaskTooltip();
+      const parent = data.tasks.find((task) => task.id === parentTaskId);
+      const subtask = parent?.subtasks?.find((item) => item.id === subtaskId);
+      if (!parent || !subtask) return;
+      contextTaskId = "";
+      contextOooId = "";
+      contextSubtaskParentId = parentTaskId;
+      contextSubtaskId = subtaskId;
+      contextMenu.innerHTML = [
+        subtaskContextButton("edit", "Modifica", "", parentTaskId, subtaskId),
+        subtaskContextButton("toggleDone", subtask.done ? "Riapri" : "Completa", "", parentTaskId, subtaskId)
+      ].join("");
+      contextMenu.classList.add("open");
+      const width = contextMenu.offsetWidth;
+      const height = contextMenu.offsetHeight;
+      contextMenu.style.left = `${Math.min(x, window.innerWidth - width - 10)}px`;
+      contextMenu.style.top = `${Math.min(y, window.innerHeight - height - 10)}px`;
+    }
+
     function openOooContextMenu(oooId, x, y) {
       hideTaskTooltip();
       contextTaskId = "";
       contextOooId = oooId;
+      contextSubtaskParentId = "";
+      contextSubtaskId = "";
       contextMenu.innerHTML = [
         oooContextButton("edit", "Modifica", "", oooId),
         oooContextButton("delete", "Elimina", "x", oooId)
@@ -2570,6 +2617,36 @@
       render();
     }
 
+    function focusSubtaskRow(subtaskId) {
+      requestAnimationFrame(() => {
+        const row = subtaskList.querySelector(`[data-subtask-id="${CSS.escape(subtaskId)}"]`);
+        if (!row) return;
+        row.scrollIntoView({ block: "center", inline: "nearest" });
+        row.querySelector("[data-subtask-title]")?.focus();
+      });
+    }
+
+    function runSubtaskContextAction(action, parentTaskId = contextSubtaskParentId, subtaskId = contextSubtaskId) {
+      const parent = data.tasks.find((task) => task.id === parentTaskId);
+      const subtask = parent?.subtasks?.find((item) => item.id === subtaskId);
+      if (!parent || !subtask) {
+        hideContextMenu();
+        return;
+      }
+      if (action === "edit") {
+        hideContextMenu();
+        openTask(parent.id);
+        focusSubtaskRow(subtask.id);
+        return;
+      }
+      if (action === "toggleDone") {
+        subtask.done = !subtask.done;
+        saveData(subtask.done ? "Completa sottotask" : "Riapri sottotask");
+        hideContextMenu();
+        render();
+      }
+    }
+
     function runContextAction(action, taskId = contextTaskId) {
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) {
@@ -2618,6 +2695,7 @@
 
     window.nokuContextAction = (action, taskId = contextTaskId) => runContextAction(action, taskId);
     window.nokuOooContextAction = (action, oooId = contextOooId) => runOooContextAction(action, oooId);
+    window.nokuSubtaskContextAction = (action, parentTaskId = contextSubtaskParentId, subtaskId = contextSubtaskId) => runSubtaskContextAction(action, parentTaskId, subtaskId);
     window.nokuDeleteTask = (taskId) => deleteTask(taskId);
     window.nokuDeleteOoo = (oooId) => deleteOoo(oooId);
     window.nokuDeleteProject = (projectId) => deleteProject(projectId);
@@ -2796,6 +2874,18 @@
     function runPrimaryButtonAction(event) {
       const contextButton = event.target.closest("#contextMenu [data-context-action]");
       if (contextButton) {
+        if (contextButton.dataset.subtaskId || contextSubtaskId) {
+          event.preventDefault();
+          event.stopPropagation();
+          runSubtaskContextAction(contextButton.dataset.contextAction, contextButton.dataset.parentTaskId || contextSubtaskParentId, contextButton.dataset.subtaskId || contextSubtaskId);
+          return;
+        }
+        if (contextButton.dataset.oooId || contextOooId) {
+          event.preventDefault();
+          event.stopPropagation();
+          runOooContextAction(contextButton.dataset.contextAction, contextButton.dataset.oooId || contextOooId);
+          return;
+        }
         const taskId = contextButton.dataset.taskId || contextTaskId;
         if (!taskId) return;
         event.preventDefault();
@@ -3031,6 +3121,12 @@
         openOooContextMenu(oooBar.dataset.oooId, event.clientX, event.clientY);
         return;
       }
+      const subtaskBar = event.target.closest("[data-subtask-id][data-parent-task-id]");
+      if (subtaskBar) {
+        event.preventDefault();
+        openSubtaskContextMenu(subtaskBar.dataset.parentTaskId, subtaskBar.dataset.subtaskId, event.clientX, event.clientY);
+        return;
+      }
       const bar = event.target.closest("[data-task-id]");
       if (!bar) return;
       event.preventDefault();
@@ -3058,6 +3154,10 @@
       event.stopPropagation();
       const button = event.target.closest("[data-context-action]");
       if (!button) return;
+      if (button.dataset.subtaskId || contextSubtaskId) {
+        runSubtaskContextAction(button.dataset.contextAction, button.dataset.parentTaskId || contextSubtaskParentId, button.dataset.subtaskId || contextSubtaskId);
+        return;
+      }
       if (button.dataset.oooId || contextOooId) {
         runOooContextAction(button.dataset.contextAction, button.dataset.oooId || contextOooId);
         return;
