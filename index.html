@@ -1318,6 +1318,10 @@
     const remoteBoardId = "noku-gantt";
     const otacosBoardId = "default";
     const otacosMirrorSource = "otacos";
+    const pedMirrorSource = "ped";
+    const pedSpreadsheetId = "11yswsHZK1Yli6SGEKXToFw-uHib-o3-IyOMOGN-9sNg";
+    const pedSheetNames = ["PP", "AF", "MF"];
+    const pedSyncIntervalMs = 60 * 1000;
     const oooProjectId = "__ooo__";
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
@@ -1398,6 +1402,8 @@
     let lastOtacosRemoteData = null;
     let startupAutoScroll = true;
     let currentTimelineRange = null;
+    let pedSyncPromise = null;
+    let pedSyncTimer = null;
 
     function taskSeed(name, projectId, member, startOffset, endOffset, status) {
       return {
@@ -1790,6 +1796,202 @@
       writeLocalSnapshot(data, history, dataRevision);
       render();
       if (startupAutoScroll) scheduleScrollToToday();
+    }
+
+    function pedCellText(cell) {
+      if (!cell) return "";
+      if (cell.f !== undefined && cell.f !== null) return String(cell.f).trim();
+      if (cell.v === undefined || cell.v === null) return "";
+      return String(cell.v).trim();
+    }
+
+    function parsePedDate(cell) {
+      const rawValue = cell?.v;
+      const serializedDate = typeof rawValue === "string"
+        ? rawValue.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/)
+        : null;
+      if (serializedDate) {
+        return iso(new Date(Number(serializedDate[1]), Number(serializedDate[2]), Number(serializedDate[3])));
+      }
+      const raw = pedCellText(cell).toLowerCase().replace(/\s+/g, " ").trim();
+      const match = raw.match(/^(\d{1,2})\s+([a-zà]+)\s+(\d{4})$/i);
+      if (!match) return "";
+      const months = {
+        gennaio: 0, febbraio: 1, marzo: 2, aprile: 3, maggio: 4, giugno: 5,
+        luglio: 6, agosto: 7, settembre: 8, ottobre: 9, novembre: 10, dicembre: 11
+      };
+      const month = months[match[2]];
+      if (month === undefined) return "";
+      const parsed = new Date(Number(match[3]), month, Number(match[1]));
+      return Number.isNaN(parsed.getTime()) ? "" : iso(parsed);
+    }
+
+    function pedHash(value) {
+      let hash = 2166136261;
+      for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return (hash >>> 0).toString(36);
+    }
+
+    function loadPedSheet(sheetName) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `__nokuPed_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        const script = document.createElement("script");
+        const cleanup = () => {
+          window.clearTimeout(timer);
+          script.remove();
+          try {
+            delete window[callbackName];
+          } catch (error) {
+            window[callbackName] = undefined;
+          }
+        };
+        const timer = window.setTimeout(() => {
+          cleanup();
+          reject(new Error(`Timeout PED ${sheetName}`));
+        }, 15000);
+        window[callbackName] = (response) => {
+          cleanup();
+          if (response?.status === "error" || !response?.table) {
+            reject(new Error(`Dati PED ${sheetName} non disponibili`));
+            return;
+          }
+          resolve(response.table);
+        };
+        script.onerror = () => {
+          cleanup();
+          reject(new Error(`Connessione PED ${sheetName} non riuscita`));
+        };
+        const tqx = encodeURIComponent(`out:json;responseHandler:${callbackName}`);
+        script.src = `https://docs.google.com/spreadsheets/d/${pedSpreadsheetId}/gviz/tq?tqx=${tqx}&sheet=${encodeURIComponent(sheetName)}&headers=1&_=${Date.now()}`;
+        document.head.appendChild(script);
+      });
+    }
+
+    function pedItemsFromTable(sheetName, table) {
+      const columns = Array.isArray(table?.cols) ? table.cols : [];
+      let dateIndex = columns.findIndex((column) => sameName(column?.label, "DATA"));
+      let titleIndex = columns.findIndex((column) => sameName(column?.label, "TITOLO/CONTENUTO"));
+      let rows = Array.isArray(table?.rows) ? table.rows : [];
+      if (dateIndex < 0 || titleIndex < 0) {
+        const headerRowIndex = rows.slice(0, 5).findIndex((row) => {
+          const values = (row?.c || []).map(pedCellText);
+          return values.some((value) => sameName(value, "TITOLO/CONTENUTO"));
+        });
+        if (headerRowIndex >= 0) {
+          const headerValues = (rows[headerRowIndex]?.c || []).map(pedCellText);
+          const detectedDateIndex = headerValues.findIndex((value) => sameName(value, "DATA"));
+          const detectedTitleIndex = headerValues.findIndex((value) => sameName(value, "TITOLO/CONTENUTO"));
+          if (detectedDateIndex >= 0) dateIndex = detectedDateIndex;
+          if (detectedTitleIndex >= 0) titleIndex = detectedTitleIndex;
+          if (dateIndex < 0) dateIndex = columns.findIndex((column) => sameName(column?.id, "A"));
+          rows = rows.slice(headerRowIndex + 1);
+        }
+      }
+      if (dateIndex < 0 || titleIndex < 0) {
+        throw new Error(`Colonne DATA/TITOLO mancanti nel tab ${sheetName}`);
+      }
+      let currentDate = "";
+      const occurrences = new Map();
+      return rows.flatMap((row) => {
+        const parsedDate = parsePedDate(row?.c?.[dateIndex]);
+        if (parsedDate) currentDate = parsedDate;
+        const title = pedCellText(row?.c?.[titleIndex]).replace(/\s+/g, " ").trim();
+        if (!currentDate || !title) return [];
+        const baseKey = `${sheetName}|${currentDate}|${title.toLowerCase()}`;
+        const occurrence = (occurrences.get(baseKey) || 0) + 1;
+        occurrences.set(baseKey, occurrence);
+        return [{
+          sourceKey: `${baseKey}|${occurrence}`,
+          sourceSheet: sheetName,
+          date: currentDate,
+          title
+        }];
+      });
+    }
+
+    function ensurePedProject(sheetName) {
+      let project = data.projects.find((item) => sameName(item.name, sheetName));
+      if (project) return project;
+      const projectColors = { PP: "#d9ff00", AF: "#00e0ff", MF: "#ff4f9a" };
+      project = {
+        id: `ped-${sheetName.toLowerCase()}`,
+        name: sheetName,
+        color: projectColors[sheetName] || colors[data.projects.length % colors.length],
+        textColor: "#111111"
+      };
+      data.projects.push(project);
+      return project;
+    }
+
+    async function syncPedMirror() {
+      if (pedSyncPromise) return pedSyncPromise;
+      pedSyncPromise = (async () => {
+        try {
+          const tables = await Promise.all(pedSheetNames.map(async (sheetName) => ({
+            sheetName,
+            table: await loadPedSheet(sheetName)
+          })));
+          const itemsBySheet = tables.map(({ sheetName, table }) => ({
+            sheetName,
+            items: pedItemsFromTable(sheetName, table)
+          }));
+          if (itemsBySheet.some(({ items }) => !items.length)) {
+            throw new Error("Uno o più tab PED risultano vuoti: sincronizzazione annullata");
+          }
+          const existingPedTasks = new Map(data.tasks
+            .filter((task) => task.mirrorSource === pedMirrorSource)
+            .map((task) => [task.sourceKey, task]));
+          const mirrorTasks = itemsBySheet.flatMap(({ sheetName, items }) => {
+            const project = ensurePedProject(sheetName);
+            return items.map((item) => {
+              const existing = existingPedTasks.get(item.sourceKey);
+              const status = existing?.status && data.statuses.some((entry) => entry.name === existing.status)
+                ? existing.status
+                : data.statuses[0]?.name || "";
+              return {
+                ...(existing || {}),
+                id: existing?.id || `ped:${pedHash(item.sourceKey)}`,
+                mirrorSource: pedMirrorSource,
+                sourceSheet: sheetName,
+                sourceKey: item.sourceKey,
+                name: `PUBBLICARE ${item.title}`,
+                projectId: project.id,
+                members: existing?.members || [data.members[0]?.name].filter(Boolean),
+                start: item.date,
+                end: item.date,
+                hasEnd: false,
+                status,
+                done: isDoneStatus(status),
+                notes: "",
+                subtasks: []
+              };
+            });
+          });
+          const manualTasks = data.tasks.filter((task) => task.mirrorSource !== pedMirrorSource);
+          const nextData = normalizeData({ ...data, tasks: [...manualTasks, ...mirrorTasks] });
+          if (dataSignature(nextData) !== dataSignature(data)) {
+            saveBackup("Prima della sincronizzazione PED", data);
+            data = nextData;
+            saveData("Sincronizza PED");
+            render();
+          }
+          setSyncMessage(remoteReady ? "Online · PED" : "Locale · PED");
+        } catch (error) {
+          console.error("PED mirror sync failed", error);
+          setSyncMessage(remoteReady ? "Online · errore PED" : "Errore PED", true);
+        } finally {
+          pedSyncPromise = null;
+        }
+      })();
+      return pedSyncPromise;
+    }
+
+    function startPedSyncSchedule() {
+      if (pedSyncTimer) window.clearInterval(pedSyncTimer);
+      pedSyncTimer = window.setInterval(() => syncPedMirror(), pedSyncIntervalMs);
     }
 
     function pushHistory(label) {
@@ -3698,6 +3900,8 @@
     async function bootApp() {
       try {
         await startRemoteSync();
+        await syncPedMirror();
+        startPedSyncSchedule();
         if (!hasRendered) {
           render();
         }
@@ -3714,6 +3918,11 @@
         scheduleStartupScrolls();
       }
     }
+
+    window.addEventListener("focus", () => syncPedMirror());
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") syncPedMirror();
+    });
 
     bootApp();
   </script>
