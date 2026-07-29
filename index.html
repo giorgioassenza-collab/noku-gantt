@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v52";
+      const appVersion = "v53";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -294,6 +294,24 @@
 
     .scroll-hint:hover {
       background: var(--accent);
+    }
+
+    .current-month-indicator {
+      position: fixed;
+      left: var(--current-month-left, 240px);
+      top: var(--current-month-top, 82px);
+      z-index: 70;
+      min-width: 142px;
+      padding: 5px 12px 4px;
+      border: 2px solid var(--ink);
+      background: var(--ink);
+      color: #fff;
+      font-family: Impact, "Arial Black", sans-serif;
+      font-size: 16px;
+      line-height: 1;
+      text-transform: uppercase;
+      box-shadow: 4px 4px 0 var(--accent);
+      pointer-events: none;
     }
 
     .sidebar {
@@ -1111,6 +1129,7 @@
         <span>Carico prima la versione online per evitare dati vecchi a schermo.</span>
       </div>
     </div>
+    <div class="current-month-indicator" id="currentMonthIndicator" aria-live="polite"></div>
     <button class="scroll-hint" id="scrollDownHint" type="button" aria-label="Ci sono altre task sotto" title="Ci sono altre task sotto">↓</button>
   </main>
 
@@ -1340,6 +1359,7 @@
     const bootScreen = document.getElementById("bootScreen");
     const board = document.getElementById("board");
     const scrollDownHint = document.getElementById("scrollDownHint");
+    const currentMonthIndicator = document.getElementById("currentMonthIndicator");
     const timeline = document.getElementById("timeline");
     const monthsEl = document.getElementById("months");
     const rowsEl = document.getElementById("rows");
@@ -1370,6 +1390,7 @@
     let hasRendered = false;
     let lastOtacosRemoteData = null;
     let startupAutoScroll = true;
+    let currentTimelineRange = null;
 
     function taskSeed(name, projectId, member, startOffset, endOffset, status) {
       return {
@@ -2250,6 +2271,7 @@
       appRoot.classList.remove("is-booting");
       bootScreen?.remove();
       requestAnimationFrame(updateScrollHint);
+      requestAnimationFrame(updateCurrentMonthIndicator);
     }
 
     function updateScrollHint() {
@@ -2273,6 +2295,18 @@
       } else {
         scrollDownHint.classList.remove("is-visible");
       }
+    }
+
+    function updateCurrentMonthIndicator() {
+      if (!currentMonthIndicator || !currentTimelineRange) return;
+      const boardRect = board.getBoundingClientRect();
+      const left = boardRect.left + sidebarWidth() + 12;
+      const top = boardRect.top + 7;
+      const visibleDayIndex = clamp(Math.floor(board.scrollLeft / dayWidth()), 0, currentTimelineRange.totalDays - 1);
+      const visibleDate = addDays(currentTimelineRange.start, visibleDayIndex);
+      currentMonthIndicator.textContent = `${monthNames[visibleDate.getMonth()]} ${visibleDate.getFullYear()}`;
+      currentMonthIndicator.style.setProperty("--current-month-left", `${left}px`);
+      currentMonthIndicator.style.setProperty("--current-month-top", `${top}px`);
     }
 
     function applyZoom() {
@@ -2305,6 +2339,7 @@
 
     function renderTimeline() {
       const range = rangeForTasks(visibleTimelineItems());
+      currentTimelineRange = range;
       const width = range.totalDays * dayWidth();
       const height = visibleRows().length * rowHeight();
       timeline.style.width = `${width}px`;
@@ -2314,6 +2349,7 @@
       monthsEl.innerHTML = monthBlocks(range).join("");
       weekendsEl.innerHTML = weekendBands(range, height).join("") + todayMarker(range, height);
       renderBars(range);
+      requestAnimationFrame(updateCurrentMonthIndicator);
     }
 
     function monthBlocks(range) {
@@ -3315,8 +3351,14 @@
       board.scrollBy({ top: Math.max(140, board.clientHeight * .75), behavior: "smooth" });
     });
 
-    board.addEventListener("scroll", updateScrollHint, { passive: true });
-    window.addEventListener("resize", updateScrollHint);
+    board.addEventListener("scroll", () => {
+      updateScrollHint();
+      updateCurrentMonthIndicator();
+    }, { passive: true });
+    window.addEventListener("resize", () => {
+      updateScrollHint();
+      updateCurrentMonthIndicator();
+    });
 
     viewFilter.addEventListener("change", render);
 
