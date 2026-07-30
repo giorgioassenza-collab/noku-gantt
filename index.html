@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v55";
+      const appVersion = "v57";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -1427,6 +1427,7 @@
     let currentTimelineRange = null;
     let pedSyncPromise = null;
     let pedSyncTimer = null;
+    let activeTooltipBar = null;
 
     function taskSeed(name, projectId, member, startOffset, endOffset, status) {
       return {
@@ -1795,19 +1796,24 @@
           const start = task.start || task.date || iso(today);
           const end = task.end || start;
           const members = matchingMemberNames(task.members || task.member || []);
+          const sourceStatus = String(task.status || "").trim();
+          const keepManualStatus = Boolean(existing?.manualStatusOverride && existing?.sourceStatus === sourceStatus && data.statuses.some((status) => status.name === existing.status));
+          const status = keepManualStatus ? existing.status : matchingStatusName(sourceStatus, existing?.status);
           return {
             ...(existing || {}),
             id: mirrorTaskId(task.id),
             mirrorSource: otacosMirrorSource,
             sourceTaskId: task.id,
+            sourceStatus,
+            manualStatusOverride: keepManualStatus,
             name: otacosTaskDisplayName(task, sourceProjects),
             projectId: project.id,
             members: members.length ? members : (existing?.members || []),
             start,
             end,
             hasEnd: Boolean(end && start && end !== start),
-            status: matchingStatusName(task.status, existing?.status),
-            done: isDoneStatus(task.status),
+            status,
+            done: isDoneStatus(status),
             notes: task.info || task.notes || existing?.notes || "",
             subtasks: []
           };
@@ -1995,17 +2001,21 @@
             return items.map((item) => {
               const existing = existingPedTasks.get(item.sourceKey);
               const isPastPublication = parseDate(item.date) < today;
-              const status = isPastPublication
-                ? doneStatus.name
-                : existing?.status && data.statuses.some((entry) => entry.name === existing.status)
-                  ? existing.status
-                  : data.statuses[0]?.name || "";
+              const keepManualStatus = Boolean(existing?.manualStatusOverride && existing?.status && data.statuses.some((entry) => entry.name === existing.status));
+              const status = keepManualStatus
+                ? existing.status
+                : isPastPublication
+                  ? doneStatus.name
+                  : existing?.status && data.statuses.some((entry) => entry.name === existing.status)
+                    ? existing.status
+                    : data.statuses[0]?.name || "";
               return {
                 ...(existing || {}),
                 id: existing?.id || `ped:${pedHash(item.sourceKey)}`,
                 mirrorSource: pedMirrorSource,
                 sourceSheet: sheetName,
                 sourceKey: item.sourceKey,
+                manualStatusOverride: keepManualStatus || Boolean(existing?.manualStatusOverride),
                 name: `PUBBLICARE ${item.title}`,
                 projectId: project.id,
                 members: [assignedMember.name],
@@ -2287,7 +2297,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v55",
+        version: window.NOKU_APP_VERSION || "v57",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2516,6 +2526,7 @@
     }
 
     function render() {
+      hideTaskTooltip();
       applyZoom();
       renderFilters();
       currentLaneLayout = buildLaneLayout(visibleRows(), visibleTimelineItems());
@@ -2968,6 +2979,7 @@
 
     function hideTaskTooltip() {
       if (!taskTooltip) return;
+      activeTooltipBar = null;
       taskTooltip.classList.remove("open");
       taskTooltip.textContent = "";
       taskTooltip.style.transform = "translate(-9999px, -9999px)";
@@ -2975,6 +2987,10 @@
 
     function moveTaskTooltip(event) {
       if (!taskTooltip || !taskTooltip.classList.contains("open")) return;
+      if (!activeTooltipBar || !activeTooltipBar.isConnected || !activeTooltipBar.matches(":hover")) {
+        hideTaskTooltip();
+        return;
+      }
       const margin = 14;
       const rect = taskTooltip.getBoundingClientRect();
       let left = event.clientX + 14;
@@ -2986,6 +3002,7 @@
 
     function showTaskTooltip(event, bar) {
       if (!taskTooltip || !isCompactOverview() || !bar?.dataset.preview) return;
+      activeTooltipBar = bar;
       taskTooltip.textContent = bar.dataset.preview;
       taskTooltip.classList.add("open");
       moveTaskTooltip(event);
@@ -3141,6 +3158,10 @@
       const status = data.statuses.find((item) => item.name === statusName);
       if (!task || !status || task.status === status.name) return;
       task.status = status.name;
+      task.done = isDoneStatus(status.name);
+      if (task.mirrorSource) {
+        task.manualStatusOverride = true;
+      }
       saveData("Cambia status task");
       render();
     }
@@ -3518,6 +3539,7 @@
       });
     });
     document.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-task-id], [data-subtask-bar-id]")) hideTaskTooltip();
       if (!event.target.closest("#contextMenu")) hideContextMenu();
     });
     document.addEventListener("keydown", (event) => {
@@ -3581,6 +3603,7 @@
     document.getElementById("taskForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const id = document.getElementById("taskId").value || (crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}`);
+      const existingTask = data.tasks.find((task) => task.id === id);
       let start = document.getElementById("taskStart").value;
       const hasEnd = document.getElementById("taskHasEnd").checked;
       let end = hasEnd ? document.getElementById("taskEnd").value : start;
@@ -3588,6 +3611,7 @@
       const selectedTaskMembers = [...document.querySelectorAll("[data-task-member]:checked")].map((input) => input.value);
       const selectedStatus = document.getElementById("taskStatus").value;
       const next = {
+        ...(existingTask || {}),
         id,
         name: document.getElementById("taskName").value.trim(),
         projectId: document.getElementById("taskProject").value,
@@ -3597,6 +3621,7 @@
         hasEnd,
         status: selectedStatus,
         done: isDoneStatus(selectedStatus),
+        manualStatusOverride: existingTask?.mirrorSource ? (existingTask.manualStatusOverride || existingTask.status !== selectedStatus) : existingTask?.manualStatusOverride,
         notes: document.getElementById("taskNotes").value.trim(),
         subtasks: collectSubtasks()
       };
@@ -3636,10 +3661,12 @@
     });
 
     board.addEventListener("scroll", () => {
+      hideTaskTooltip();
       updateScrollHint();
       updateCurrentMonthIndicator();
     }, { passive: true });
     window.addEventListener("resize", () => {
+      hideTaskTooltip();
       updateScrollHint();
       updateCurrentMonthIndicator();
     });
@@ -3706,6 +3733,10 @@
 
     barsEl.addEventListener("pointermove", (event) => {
       moveTaskTooltip(event);
+    });
+
+    barsEl.addEventListener("pointerleave", () => {
+      hideTaskTooltip();
     });
 
     barsEl.addEventListener("pointerout", (event) => {
