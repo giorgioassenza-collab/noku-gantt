@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v71";
+      const appVersion = "v73";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -1381,6 +1381,7 @@
     const historyKey = "noku-gantt-history-v16";
     const backupKey = "noku-gantt-backups-v1";
     const revisionKey = "noku-gantt-revision-v1";
+    const pendingSaveKey = "noku-gantt-pending-save-v1";
     const remoteBoardId = "noku-gantt";
     const otacosBoardId = "default";
     const otacosMirrorSource = "otacos";
@@ -1466,6 +1467,7 @@
     let remoteReady = false;
     let applyingRemoteUpdate = false;
     let pendingRemoteSave = false;
+    let pendingLocalSnapshot = null;
     let dataRevision = Number(safeStorageGet(revisionKey) || 0);
     let hasRendered = false;
     let lastOtacosRemoteData = null;
@@ -1545,6 +1547,12 @@
     }
 
     function loadData() {
+      try {
+        const pending = JSON.parse(safeStorageGet(pendingSaveKey) || "null");
+        if (pending?.data && Array.isArray(pending.data.tasks)) return normalizeData(pending.data);
+      } catch (error) {
+        console.warn(error);
+      }
       try {
         const migrated = migrateLegacyData();
         if (migrated) return migrated;
@@ -1961,11 +1969,68 @@
     }
 
     function writeLocalSnapshot(snapshotData = data, snapshotHistory = history, revision = dataRevision) {
-      const normalized = normalizeData(snapshotData);
+      let normalized = normalizeData(snapshotData);
+      if (pendingLocalSnapshot) {
+        const pendingAge = Date.now() - Number(pendingLocalSnapshot.confirmedAt || pendingLocalSnapshot.savedAt || Date.now());
+        const incomingSignature = dataSignature(normalized);
+        const pendingSignature = dataSignature(normalizeData(pendingLocalSnapshot.data));
+        if (pendingAge < 60 * 1000 && incomingSignature !== pendingSignature) {
+          normalized = normalizeData(pendingLocalSnapshot.data);
+          snapshotHistory = pendingLocalSnapshot.history || snapshotHistory;
+          revision = Math.max(Number(revision || 0), Number(pendingLocalSnapshot.revision || 0));
+        }
+      }
       safeStorageSet(storageKey, JSON.stringify(normalized));
       safeStorageSet(stableStorageKey, JSON.stringify(normalized));
       safeStorageSet(historyKey, JSON.stringify((snapshotHistory || []).slice(0, 10)));
       safeStorageSet(revisionKey, String(revision || 0));
+    }
+
+    function loadPendingLocalSnapshot() {
+      try {
+        const payload = JSON.parse(safeStorageGet(pendingSaveKey) || "null");
+        if (!payload?.data || !Array.isArray(payload.data.tasks)) return null;
+        if (payload.confirmedAt && Date.now() - Number(payload.confirmedAt) > 60 * 1000) {
+          localStorage.removeItem(pendingSaveKey);
+          return null;
+        }
+        return {
+          data: cleanForRemote(normalizeData(payload.data)),
+          history: Array.isArray(payload.history) ? payload.history.slice(0, 10) : [],
+          revision: Number(payload.revision || 0),
+          savedAt: Number(payload.savedAt || Date.now()),
+          confirmedAt: payload.confirmedAt ? Number(payload.confirmedAt) : 0
+        };
+      } catch (error) {
+        console.warn(error);
+        return null;
+      }
+    }
+
+    function storePendingLocalSnapshot(snapshot) {
+      if (!snapshot?.data) return;
+      safeStorageSet(pendingSaveKey, JSON.stringify({
+        ...snapshot,
+        savedAt: snapshot.savedAt || Date.now()
+      }));
+    }
+
+    function clearPendingLocalSnapshot(revision) {
+      if (pendingLocalSnapshot && revision && pendingLocalSnapshot.revision !== revision) return;
+      if (pendingLocalSnapshot) {
+        const protectedUntil = Number(pendingLocalSnapshot.confirmedAt || pendingLocalSnapshot.savedAt || Date.now()) + 60 * 1000;
+        if (Date.now() < protectedUntil) {
+          storePendingLocalSnapshot(pendingLocalSnapshot);
+          return;
+        }
+      }
+      pendingLocalSnapshot = null;
+      pendingRemoteSave = false;
+      try {
+        localStorage.removeItem(pendingSaveKey);
+      } catch (error) {
+        console.warn(error);
+      }
     }
 
     function withTimeout(promise, milliseconds, label) {
@@ -2358,7 +2423,20 @@
           writeLocalSnapshot(data, history, dataRevision);
           scheduleScrollToToday();
         } else {
-          applyRemoteDocument(snapshot.data(), true);
+          if (!pendingRemoteSave) {
+            const remoteRevision = Number(snapshot.data()?.revision || 0);
+            if (remoteRevision > dataRevision) {
+              applyRemoteDocument(snapshot.data(), true);
+            } else if (dataRevision > remoteRevision) {
+              pendingRemoteSave = true;
+              pendingLocalSnapshot = {
+                data: cleanForRemote(normalizeData(data)),
+                history: cleanForRemote(history.slice(0, 10)),
+                revision: dataRevision
+              };
+              storePendingLocalSnapshot(pendingLocalSnapshot);
+            }
+          }
         }
         unsubscribeBoard = onSnapshot(boardRef, (remoteSnapshot) => {
           if (!remoteSnapshot.exists() || applyingRemoteUpdate) return;
@@ -2377,7 +2455,7 @@
         setSyncMessage("Online");
         if (pendingRemoteSave) {
           pendingRemoteSave = false;
-          queueRemoteSave("Sincronizza modifiche locali");
+          queueRemoteSave("Sincronizza modifiche locali", pendingLocalSnapshot);
         }
       } catch (error) {
         console.error("Firebase load failed", error);
@@ -2388,9 +2466,25 @@
 
     function applyRemoteDocument(remoteDoc, force = false) {
       const remoteRevision = Number(remoteDoc?.revision || 0);
-      if (!force && remoteRevision <= dataRevision) return;
       const remoteData = remoteDoc?.data;
       if (!remoteData || !Array.isArray(remoteData.tasks)) return;
+      if (pendingLocalSnapshot) {
+        const remoteSignature = dataSignature(normalizeData(remoteData));
+        const pendingSignature = dataSignature(normalizeData(pendingLocalSnapshot.data));
+        if (remoteRevision >= pendingLocalSnapshot.revision && remoteSignature === pendingSignature) {
+          if (!pendingLocalSnapshot.confirmedAt) {
+            pendingLocalSnapshot.confirmedAt = Date.now();
+            storePendingLocalSnapshot(pendingLocalSnapshot);
+          }
+          if (Date.now() - pendingLocalSnapshot.confirmedAt > 60 * 1000) {
+            clearPendingLocalSnapshot(pendingLocalSnapshot.revision);
+          }
+        } else if (!force) {
+          return;
+        }
+      }
+      if (!force && applyingRemoteUpdate) return;
+      if (!force && remoteRevision <= dataRevision) return;
       data = normalizeData(remoteData);
       history = Array.isArray(remoteDoc.history) ? remoteDoc.history.slice(0, 10) : history;
       dataRevision = remoteRevision;
@@ -2406,17 +2500,27 @@
       setSyncMessage("Online");
     }
 
-    function queueRemoteSave(label = "Modifica") {
+    function queueRemoteSave(label = "Modifica", forcedSnapshot = null) {
+      const protectedPending = pendingLocalSnapshot && !forcedSnapshot && /^Sincronizza/.test(label);
+      const sourceSnapshot = forcedSnapshot || (protectedPending ? pendingLocalSnapshot : null);
+      const snapshotData = sourceSnapshot?.data || cleanForRemote(normalizeData(data));
+      const snapshotHistory = sourceSnapshot?.history || cleanForRemote(history.slice(0, 10));
+      const nextRevision = sourceSnapshot?.revision || Math.max(Date.now(), dataRevision + 1);
+      dataRevision = Math.max(dataRevision, nextRevision);
+      pendingLocalSnapshot = {
+        data: snapshotData,
+        history: snapshotHistory,
+        revision: nextRevision,
+        savedAt: sourceSnapshot?.savedAt || Date.now(),
+        confirmedAt: sourceSnapshot?.confirmedAt || 0
+      };
+      storePendingLocalSnapshot(pendingLocalSnapshot);
+      writeLocalSnapshot(snapshotData, snapshotHistory, dataRevision);
       if (!boardRef || !remoteReady || !remoteApi) {
         pendingRemoteSave = true;
         setSyncMessage("In attesa", true);
         return;
       }
-      const snapshotData = cleanForRemote(normalizeData(data));
-      const snapshotHistory = cleanForRemote(history.slice(0, 10));
-      const nextRevision = Math.max(Date.now(), dataRevision + 1);
-      dataRevision = nextRevision;
-      writeLocalSnapshot(snapshotData, snapshotHistory, dataRevision);
       saveQueue = saveQueue.catch(() => {}).then(async () => {
         try {
           setSyncMessage("Salvataggio...");
@@ -2428,6 +2532,7 @@
             updatedAt: remoteApi.serverTimestamp()
           }, { merge: true });
           applyingRemoteUpdate = false;
+          pendingRemoteSave = false;
           setSyncMessage("Online");
         } catch (error) {
           applyingRemoteUpdate = false;
@@ -2589,7 +2694,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v71",
+        version: window.NOKU_APP_VERSION || "v73",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2807,7 +2912,7 @@
     }
 
     function rangeForTasks(tasks = visibleTasks()) {
-      const taskDates = tasks.flatMap((task) => [parseDate(task.start), parseDate(task.end)]);
+      const taskDates = [today, ...tasks.flatMap((task) => [parseDate(task.start), parseDate(task.end)])];
       const min = taskDates.length ? new Date(Math.min(...taskDates)) : today;
       const max = taskDates.length ? new Date(Math.max(...taskDates)) : today;
       const start = new Date(min.getFullYear(), min.getMonth(), 1);
@@ -4061,7 +4166,10 @@
       updateCurrentMonthIndicator();
     });
 
-    viewFilter.addEventListener("change", render);
+    viewFilter.addEventListener("change", () => {
+      render();
+      scheduleScrollToToday();
+    });
 
     barsEl.addEventListener("dblclick", (event) => {
       const subtaskBar = event.target.closest("[data-parent-task-id]");
@@ -4420,6 +4528,16 @@
 
     async function bootApp() {
       try {
+        const storedPendingSnapshot = loadPendingLocalSnapshot();
+        if (storedPendingSnapshot) {
+          pendingLocalSnapshot = storedPendingSnapshot;
+          pendingRemoteSave = true;
+          data = normalizeData(storedPendingSnapshot.data);
+          history = Array.isArray(storedPendingSnapshot.history) ? storedPendingSnapshot.history.slice(0, 10) : history;
+          dataRevision = storedPendingSnapshot.revision;
+          lastSavedData = cloneData(data);
+          writeLocalSnapshot(data, history, dataRevision);
+        }
         try {
           await startRemoteSync();
         } catch (remoteError) {
