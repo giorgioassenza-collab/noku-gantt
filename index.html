@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v69";
+      const appVersion = "v71";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -2589,7 +2589,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v69",
+        version: window.NOKU_APP_VERSION || "v71",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2686,9 +2686,95 @@
     }
 
     function laneStep() {
-      if (isUltraOverview()) return 166;
-      if (isCompactOverview()) return 146;
+      if (isUltraOverview() || isCompactOverview()) {
+        const maxHeight = visibleTimelineItems().reduce((max, task) => Math.max(max, compactBarHeight(task, estimatedBarWidth(task))), 0);
+        return maxHeight + 10;
+      }
       return 32;
+    }
+
+    function estimateWrappedLines(text, contentWidth, fontSize) {
+      const maxWidth = Math.max(36, contentWidth);
+      const words = String(text || "").trim().split(/\s+/).filter(Boolean);
+      if (!words.length) return 1;
+      const canvas = estimateWrappedLines.canvas || (estimateWrappedLines.canvas = document.createElement("canvas"));
+      const context = canvas.getContext("2d");
+      const fallbackCharWidth = fontSize * .64;
+      const textWidth = (value) => {
+        if (!context) return String(value || "").length * fallbackCharWidth;
+        context.font = `900 ${fontSize}px "Arial Narrow", "Helvetica Neue", Arial, sans-serif`;
+        return context.measureText(String(value || "")).width;
+      };
+      const spaceWidth = textWidth(" ");
+      let lines = 1;
+      let lineWidth = 0;
+      words.forEach((word) => {
+        const wordWidth = Math.max(fallbackCharWidth, textWidth(word));
+        if (wordWidth > maxWidth) {
+          const chunkLines = Math.ceil(wordWidth / maxWidth);
+          if (lineWidth > 0) {
+            lines += chunkLines;
+            lineWidth = wordWidth % maxWidth;
+          } else {
+            lines += chunkLines - 1;
+            lineWidth = wordWidth % maxWidth;
+          }
+          return;
+        }
+        const nextWidth = lineWidth ? lineWidth + spaceWidth + wordWidth : wordWidth;
+        if (nextWidth > maxWidth) {
+          lines += 1;
+          lineWidth = wordWidth;
+        } else {
+          lineWidth = nextWidth;
+        }
+      });
+      return lines;
+    }
+
+    function estimatedBarWidth(task) {
+      const span = daysBetween(parseDate(task.start), parseDate(task.end || task.start));
+      if (task.type === "subtask") return Math.max(92, span * dayWidth() - 24);
+      if (task.type === "ooo") return Math.max(74, span * dayWidth() - 16);
+      return Math.max(44, span * dayWidth() - 16);
+    }
+
+    function compactBarHeight(task, barWidth = estimatedBarWidth(task)) {
+      if (!isCompactOverview()) return task?.type === "subtask" ? 28 : 26;
+      if (task?.type === "ooo") return isUltraOverview() ? 34 : 30;
+      const fontSize = isUltraOverview() ? 10 : 11;
+      const lineHeight = fontSize * (isUltraOverview() ? 1.1 : 1.12);
+      const horizontalPadding = isUltraOverview() ? 12 : 16;
+      const titleWidth = Math.max(36, barWidth - horizontalPadding);
+      const titleLines = estimateWrappedLines(task?.name || "Task", titleWidth, fontSize);
+      const controlsHeight = compactControlsHeight(task, titleWidth);
+      const padding = 10;
+      const gap = 4;
+      return Math.ceil(padding + (titleLines * lineHeight) + gap + controlsHeight + 8);
+    }
+
+    function compactControlsHeight(task, contentWidth) {
+      const rowHeight = isUltraOverview() ? 16 : 18;
+      const gap = 4;
+      const memberWidth = isUltraOverview() ? 42 : 56;
+      const statusWidth = isUltraOverview() ? 62 : 70;
+      const widths = [];
+      if ((task?.members || []).length) widths.push(memberWidth);
+      if (task?.type !== "subtask" && (task?.members || []).length > 1) widths.push(memberWidth);
+      if (task?.type !== "subtask") widths.push(statusWidth);
+      if (!widths.length) return rowHeight;
+      let rows = 1;
+      let currentWidth = 0;
+      widths.forEach((width) => {
+        const nextWidth = currentWidth ? currentWidth + gap + width : width;
+        if (nextWidth > contentWidth && currentWidth > 0) {
+          rows += 1;
+          currentWidth = width;
+        } else {
+          currentWidth = nextWidth;
+        }
+      });
+      return (rows * rowHeight) + ((rows - 1) * gap);
     }
 
     function rowHeightForLanes(lanes) {
@@ -3014,9 +3100,11 @@
           const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
           const top = rows.findIndex((item) => item.id === oooProjectId) * rowHeight() + 8 + (lane * laneStep());
           const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
+          const barWidth = Math.max(74, width);
+          const barHeight = compactBarHeight(task, barWidth);
           const preview = [`OOO ${task.member}`, `${task.start}${task.end !== task.start ? ` - ${task.end}` : ""}`].join("\n");
           return `
-            <div class="bar is-ooo" data-ooo-id="${task.id}" data-start-date="${task.start}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(74, width)}px;border-color:${member?.color || "#111111"};background:${member?.color || "#ffffff"};color:${member?.textColor || "#111111"}">
+            <div class="bar is-ooo" data-ooo-id="${task.id}" data-start-date="${task.start}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${barWidth}px;height:${barHeight}px;border-color:${member?.color || "#111111"};background:${member?.color || "#ffffff"};color:${member?.textColor || "#111111"}">
               <span class="bar-title">${escapeHtml(task.member)}</span>
             </div>
           `;
@@ -3028,6 +3116,8 @@
           const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
           const top = rows.findIndex((item) => item.id === task.projectId) * rowHeight() + 10 + (lane * laneStep());
           const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 24;
+          const barWidth = Math.max(92, width);
+          const barHeight = compactBarHeight(task, barWidth);
           const memberNames = (task.members || []).slice(0, isCompactOverview() ? 1 : 2);
           const memberBadges = memberNames.map((memberName) => {
             const member = data.members.find((item) => item.name === memberName);
@@ -3039,7 +3129,7 @@
             `Task: ${parentName}`
           ].join("\n");
           return `
-            <div class="bar is-subtask${task.done ? " is-done" : ""}" data-subtask-bar-id="${escapeAttr(task.id)}" data-subtask-id="${escapeAttr(task.subtaskId)}" data-parent-task-id="${escapeAttr(task.parentTaskId)}" data-start-date="${task.start}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(92, width)}px;border-color:${project.color}">
+            <div class="bar is-subtask${task.done ? " is-done" : ""}" data-subtask-bar-id="${escapeAttr(task.id)}" data-subtask-id="${escapeAttr(task.subtaskId)}" data-parent-task-id="${escapeAttr(task.parentTaskId)}" data-start-date="${task.start}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${barWidth}px;height:${barHeight}px;border-color:${project.color}">
               <span class="bar-title">${escapeHtml(task.name)}</span>
               <span class="bar-parent">${escapeHtml(parentName)}</span>
               ${memberBadges}
@@ -3052,6 +3142,8 @@
         const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
         const top = rows.findIndex((item) => item.id === task.projectId) * rowHeight() + 8 + (lane * laneStep());
         const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
+        const barWidth = Math.max(44, width);
+        const barHeight = compactBarHeight(task, barWidth);
         const done = isTaskDone(task) ? " is-done" : "";
         const subtasks = task.subtasks || [];
         const completedSubtasks = subtasks.filter((subtask) => subtask.done).length;
@@ -3071,7 +3163,7 @@
           `Status: ${status.name || "Nessuno"}`
         ].join("\n");
         return `
-          <div class="bar${done}" data-task-id="${task.id}" data-start-date="${task.start}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${Math.max(44, width)}px;border-color:${project.color}">
+          <div class="bar${done}" data-task-id="${task.id}" data-start-date="${task.start}" data-preview="${escapeAttr(preview)}" aria-label="${escapeAttr(preview)}" style="left:${left}px;top:${top}px;width:${barWidth}px;height:${barHeight}px;border-color:${project.color}">
             <span class="bar-title">${escapeHtml(task.name)}</span>
             ${subtaskBadge}
             ${memberBadges}
