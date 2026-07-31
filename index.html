@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v75";
+      const appVersion = "v77";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -462,9 +462,25 @@
     .grid {
       z-index: 1;
       background:
-        repeating-linear-gradient(to right, transparent 0, transparent calc(var(--day) - 1px), rgba(0, 0, 0, .12) calc(var(--day) - 1px), rgba(0, 0, 0, .12) var(--day)),
-        repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--row) - 1px), rgba(0, 0, 0, .12) calc(var(--row) - 1px), rgba(0, 0, 0, .12) var(--row));
+        repeating-linear-gradient(to right, transparent 0, transparent calc(var(--day) - 1px), rgba(0, 0, 0, .12) calc(var(--day) - 1px), rgba(0, 0, 0, .12) var(--day));
       pointer-events: none;
+    }
+
+    .project-band {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, .025);
+      border-bottom: 2px solid rgba(0, 0, 0, .2);
+    }
+
+    .project-band:nth-child(odd) {
+      background: rgba(255, 255, 255, .22);
+    }
+
+    .project-band.is-ooo {
+      background: rgba(217, 255, 0, .08);
+      border-bottom-color: rgba(0, 0, 0, .32);
     }
 
     .weekends {
@@ -2706,7 +2722,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v75",
+        version: window.NOKU_APP_VERSION || "v77",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2914,22 +2930,14 @@
             const start = parseDate(task.start);
             const end = parseDate(task.end || task.start);
             const taskHeight = compactBarHeight(task, estimatedBarWidth(task));
-            let topOffset = 0;
-            let laneIndex = 0;
-            let searching = true;
-            while (searching) {
-              searching = false;
-              for (const item of placed) {
-                const datesOverlap = start <= item.end && end >= item.start;
-                const verticalOverlap = topOffset < item.top + item.height + 10 && topOffset + taskHeight + 10 > item.top;
-                if (datesOverlap && verticalOverlap) {
-                  topOffset = item.top + item.height + 10;
-                  laneIndex = Math.max(laneIndex, item.lane + 1);
-                  searching = true;
-                }
-              }
-            }
-            placed.push({ start, end, top: topOffset, height: taskHeight, lane: laneIndex });
+            const startValue = stripTime(start).getTime();
+            const endValue = stripTime(end).getTime() + DAY_MS;
+            const horizontalOverlap = (item) => startValue < item.endValue && endValue > item.startValue;
+            const verticalOverlap = (top, item) => top < item.top + item.height + 10 && top + taskHeight + 10 > item.top;
+            const candidates = [0, ...placed.filter(horizontalOverlap).map((item) => item.top + item.height + 10)].sort((a, b) => a - b);
+            const topOffset = candidates.find((candidate) => !placed.some((item) => horizontalOverlap(item) && verticalOverlap(candidate, item))) ?? 0;
+            const laneIndex = placed.filter((item) => item.top < topOffset).length;
+            placed.push({ startValue, endValue, top: topOffset, height: taskHeight, lane: laneIndex });
             taskLanes.set(task.id, laneIndex);
             taskOffsets.set(task.id, topOffset);
           });
@@ -3166,9 +3174,20 @@
       gridEl.style.height = `${height}px`;
       weekendsEl.style.height = `${height}px`;
       monthsEl.innerHTML = monthBlocks(range).join("");
+      gridEl.innerHTML = projectBands().join("");
       weekendsEl.innerHTML = weekendBands(range, height).join("") + todayMarker(range, height);
       renderBars(range);
       requestAnimationFrame(updateCurrentMonthIndicator);
+    }
+
+    function projectBands() {
+      return visibleRows().map((project) => {
+        const top = currentLaneLayout.rowTops?.get(project.id) || 0;
+        const height = currentLaneLayout.rowHeights?.get(project.id) || 42;
+        const classes = ["project-band"];
+        if (project.isOoo) classes.push("is-ooo");
+        return `<div class="${classes.join(" ")}" style="top:${top}px;height:${height}px"></div>`;
+      });
     }
 
     function monthBlocks(range) {
