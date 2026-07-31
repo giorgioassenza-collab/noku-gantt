@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v73";
+      const appVersion = "v75";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -1874,6 +1874,18 @@
       return start <= today && end >= today;
     }
 
+    function overlapsDateRange(item, startRange, endRange) {
+      if (!item?.start) return false;
+      const start = parseDate(item.start);
+      const end = parseDate(item.end || item.start);
+      return start <= endRange && end >= startRange;
+    }
+
+    function isInLastWeek(item) {
+      const weekStart = addDays(today, -6);
+      return overlapsDateRange(item, weekStart, today);
+    }
+
     function safeStorageGet(key) {
       try {
         return localStorage.getItem(key);
@@ -2694,7 +2706,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v73",
+        version: window.NOKU_APP_VERSION || "v75",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2888,27 +2900,46 @@
 
     function buildLaneLayout(projects, tasks = visibleTasks()) {
       const taskLanes = new Map();
+      const taskOffsets = new Map();
+      const rowHeights = new Map();
+      const rowTops = new Map();
       let maxLanes = 1;
+      let totalHeight = 0;
       projects.forEach((project) => {
-        const lanes = [];
+        const placed = [];
         tasks
           .filter((task) => task.projectId === project.id)
           .sort((a, b) => parseDate(a.start) - parseDate(b.start) || parseDate(a.end) - parseDate(b.end))
           .forEach((task) => {
             const start = parseDate(task.start);
-            const end = parseDate(task.end);
-            let laneIndex = lanes.findIndex((laneEnd) => diffDays(start, laneEnd) > 0);
-            if (laneIndex === -1) {
-              laneIndex = lanes.length;
-              lanes.push(end);
-            } else {
-              lanes[laneIndex] = end;
+            const end = parseDate(task.end || task.start);
+            const taskHeight = compactBarHeight(task, estimatedBarWidth(task));
+            let topOffset = 0;
+            let laneIndex = 0;
+            let searching = true;
+            while (searching) {
+              searching = false;
+              for (const item of placed) {
+                const datesOverlap = start <= item.end && end >= item.start;
+                const verticalOverlap = topOffset < item.top + item.height + 10 && topOffset + taskHeight + 10 > item.top;
+                if (datesOverlap && verticalOverlap) {
+                  topOffset = item.top + item.height + 10;
+                  laneIndex = Math.max(laneIndex, item.lane + 1);
+                  searching = true;
+                }
+              }
             }
+            placed.push({ start, end, top: topOffset, height: taskHeight, lane: laneIndex });
             taskLanes.set(task.id, laneIndex);
+            taskOffsets.set(task.id, topOffset);
           });
-        maxLanes = Math.max(maxLanes, lanes.length || 1);
+        const rowHeightValue = placed.length ? Math.max(42, 16 + Math.max(...placed.map((item) => item.top + item.height))) : 42;
+        rowTops.set(project.id, totalHeight);
+        rowHeights.set(project.id, rowHeightValue);
+        totalHeight += rowHeightValue;
+        maxLanes = Math.max(maxLanes, placed.length ? Math.max(...placed.map((item) => item.lane + 1)) : 1);
       });
-      return { taskLanes, maxLanes };
+      return { taskLanes, taskOffsets, rowHeights, rowTops, maxLanes, totalHeight };
     }
 
     function rangeForTasks(tasks = visibleTasks()) {
@@ -2925,7 +2956,22 @@
     }
 
     function visibleProjects() {
-      return data.projects;
+      const member = selectedMember();
+      if (!member) return data.projects;
+      return data.projects.filter((project) => projectHasRecentMemberActivity(project.id, member));
+    }
+
+    function projectHasRecentMemberActivity(projectId, member) {
+      return data.tasks.some((task) => {
+        if (task.projectId !== projectId) return false;
+        if ((task.members || []).includes(member) && isInLastWeek(task)) return true;
+        return (task.subtasks || []).some((subtask) => {
+          if (!subtask.start) return false;
+          const subtaskMembers = subtask.members || [];
+          const assignedToMember = subtaskMembers.includes(member) || (!subtaskMembers.length && (task.members || []).includes(member));
+          return assignedToMember && isInLastWeek(subtask);
+        });
+      });
     }
 
     function visibleOoo() {
@@ -3019,7 +3065,7 @@
       applyZoom();
       renderFilters();
       currentLaneLayout = buildLaneLayout(visibleRows(), visibleTimelineItems());
-      document.documentElement.style.setProperty("--row", `${rowHeightForLanes(currentLaneLayout.maxLanes)}px`);
+      document.documentElement.style.setProperty("--row", `${Math.max(42, Math.round((currentLaneLayout.totalHeight || 42) / Math.max(1, visibleRows().length)))}px`);
       renderRows();
       renderTimeline();
       renderFormOptions();
@@ -3103,7 +3149,7 @@
 
     function renderRows() {
       rowsEl.innerHTML = visibleRows().map((project) => `
-        <div class="member-row">
+        <div class="member-row" style="height:${currentLaneLayout.rowHeights?.get(project.id) || 42}px">
           <span class="avatar" style="background:${project.color};color:${project.textColor || "#111111"}">${initials(project.name)}</span>
           <span>${escapeHtml(project.name)}</span>
         </div>
@@ -3114,7 +3160,7 @@
       const range = rangeForTasks(visibleTimelineItems());
       currentTimelineRange = range;
       const width = range.totalDays * dayWidth();
-      const height = visibleRows().length * rowHeight();
+      const height = currentLaneLayout.totalHeight || visibleRows().length * rowHeight();
       timeline.style.width = `${width}px`;
       timeline.style.height = `${height + 78}px`;
       gridEl.style.height = `${height}px`;
@@ -3193,17 +3239,24 @@
       }, 3500);
     }
 
+    function rowTop(projectId) {
+      return currentLaneLayout.rowTops?.get(projectId) || 0;
+    }
+
+    function taskLaneTop(task, base = 8) {
+      return rowTop(task.projectId) + base + (currentLaneLayout.taskOffsets?.get(task.id) || 0);
+    }
+
     function renderBars(range) {
       const rows = visibleRows();
       const rowIds = rows.map((project) => project.id);
       const tasks = visibleTimelineItems().filter((task) => rowIds.includes(task.projectId));
-      barsEl.style.height = `${rows.length * rowHeight()}px`;
+      barsEl.style.height = `${currentLaneLayout.totalHeight || rows.length * rowHeight()}px`;
       barsEl.innerHTML = tasks.map((task) => {
         if (task.type === "ooo") {
           const member = data.members.find((item) => item.name === task.member) || data.members[0];
           const left = diffDays(parseDate(task.start), range.start) * dayWidth() + 8;
-          const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
-          const top = rows.findIndex((item) => item.id === oooProjectId) * rowHeight() + 8 + (lane * laneStep());
+          const top = taskLaneTop(task, 8);
           const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
           const barWidth = Math.max(74, width);
           const barHeight = compactBarHeight(task, barWidth);
@@ -3218,8 +3271,7 @@
           const parent = data.tasks.find((item) => item.id === task.parentTaskId);
           const project = data.projects.find((item) => item.id === task.projectId) || data.projects[0];
           const left = diffDays(parseDate(task.start), range.start) * dayWidth() + 12;
-          const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
-          const top = rows.findIndex((item) => item.id === task.projectId) * rowHeight() + 10 + (lane * laneStep());
+          const top = taskLaneTop(task, 10);
           const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 24;
           const barWidth = Math.max(92, width);
           const barHeight = compactBarHeight(task, barWidth);
@@ -3244,8 +3296,7 @@
         const project = data.projects.find((item) => item.id === task.projectId) || data.projects[0];
         const status = data.statuses.find((item) => item.name === task.status) || data.statuses[0];
         const left = diffDays(parseDate(task.start), range.start) * dayWidth() + 8;
-        const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
-        const top = rows.findIndex((item) => item.id === task.projectId) * rowHeight() + 8 + (lane * laneStep());
+        const top = taskLaneTop(task, 8);
         const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
         const barWidth = Math.max(44, width);
         const barHeight = compactBarHeight(task, barWidth);
