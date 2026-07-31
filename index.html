@@ -1330,6 +1330,7 @@
   </nav>
   <div class="task-tooltip" id="taskTooltip" role="tooltip"></div>
 
+  <script src="calendar-sync.js"></script>
   <script type="module">
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyCq4dqoSiAe-_mAVxBGOkuS8U54-xZgoNs",
@@ -1352,6 +1353,9 @@
     const otacosBoardId = "default";
     const otacosMirrorSource = "otacos";
     const pedMirrorSource = "ped";
+    const calendarMirrorSource = "google-calendar";
+    const calendarSyncUrl = "calendar-sync.json";
+    const calendarSyncIntervalMs = 60 * 1000;
     const pedSpreadsheetId = "11yswsHZK1Yli6SGEKXToFw-uHib-o3-IyOMOGN-9sNg";
     const pedSheetNames = ["PP", "AF", "MF"];
     const pedSyncIntervalMs = 60 * 1000;
@@ -1437,6 +1441,8 @@
     let currentTimelineRange = null;
     let pedSyncPromise = null;
     let pedSyncTimer = null;
+    let calendarSyncPromise = null;
+    let calendarSyncTimer = null;
     let activeTooltipBar = null;
 
     function taskSeed(name, projectId, member, startOffset, endOffset, status) {
@@ -1568,6 +1574,7 @@
         const start = entry.start || iso(today);
         const end = entry.hasEnd === false ? start : (entry.end || start);
         return {
+          ...entry,
           id: entry.id || `ooo-${Math.random().toString(16).slice(2)}`,
           member: memberName,
           start,
@@ -1576,6 +1583,189 @@
         };
       }).filter((entry) => entry.member);
       return normalized;
+    }
+
+    function calendarText(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    function excludedCalendarTitle(title) {
+      const value = calendarText(title);
+      return ["daily", "breakfast trend", "friday inspo", "the kolors"]
+        .some((excluded) => value.includes(excluded));
+    }
+
+    function ensureCalendarMember(name) {
+      const aliases = {
+        "giorgio assenza": "Gio",
+        "valentina viscomi": "Vale",
+        "alessia lunardi": "Ale"
+      };
+      const wanted = aliases[calendarText(name)] || String(name || "").trim();
+      let member = data.members.find((item) => sameName(item.name, wanted));
+      if (member) return member;
+      member = {
+        name: wanted,
+        color: colors[data.members.length % colors.length],
+        textColor: "#111111"
+      };
+      data.members.push(member);
+      return member;
+    }
+
+    function ensureCalendarFallbackProject() {
+      let project = data.projects.find((item) => sameName(item.name, "CALL & APPUNTAMENTI"));
+      if (project) return project;
+      project = {
+        id: "call-appuntamenti",
+        name: "CALL & APPUNTAMENTI",
+        color: "#c084fc",
+        textColor: "#111111"
+      };
+      data.projects.push(project);
+      return project;
+    }
+
+    function calendarProjectForTitle(title) {
+      const normalizedTitle = calendarText(title);
+      const aliases = {
+        "o tacos": ["otacos", "o tacos"],
+        "x factor": ["x factor", "xf"],
+        "sky coppe": ["sky coppe", "coppe"]
+      };
+      const candidates = data.projects
+        .filter((project) => project.id !== "call-appuntamenti")
+        .map((project) => {
+          const projectName = calendarText(project.name);
+          const terms = [projectName, ...(aliases[projectName] || [])].filter(Boolean);
+          const score = Math.max(...terms.map((term) => normalizedTitle.includes(term) ? term.length : 0), 0);
+          return { project, score };
+        })
+        .filter((entry) => entry.score > 0)
+        .sort((left, right) => right.score - left.score);
+      return candidates[0]?.project || ensureCalendarFallbackProject();
+    }
+
+    function calendarDate(value) {
+      return String(value || "").slice(0, 10);
+    }
+
+    function calendarSourceKey(event) {
+      return `${event.eventId || event.id || calendarText(event.title)}|${event.start || event.startDate || ""}`;
+    }
+
+    function syncCalendarFeed(feed) {
+      const events = Array.isArray(feed?.events) ? feed.events : [];
+      const accepted = events.filter((event) =>
+        event?.responseStatus === "accepted" &&
+        !event.allDay &&
+        !excludedCalendarTitle(event.title)
+      );
+      const grouped = new Map();
+      accepted.forEach((event) => {
+        const key = calendarSourceKey(event);
+        const current = grouped.get(key) || { ...event, people: [] };
+        current.people.push(event.person);
+        grouped.set(key, current);
+      });
+      const existingTasks = new Map(data.tasks
+        .filter((task) => task.mirrorSource === calendarMirrorSource)
+        .map((task) => [task.sourceKey, task]));
+      const status = data.statuses[0]?.name || "";
+      const importedTasks = [...grouped.entries()].map(([sourceKey, event]) => {
+        const existing = existingTasks.get(sourceKey);
+        const members = [...new Set(event.people.filter(Boolean).map((person) => ensureCalendarMember(person).name))];
+        const start = calendarDate(event.start);
+        const end = calendarDate(event.end) || start;
+        const project = existing?.manualProjectOverride
+          ? data.projects.find((item) => item.id === existing.projectId) || calendarProjectForTitle(event.title)
+          : calendarProjectForTitle(event.title);
+        return {
+          ...(existing || {}),
+          id: existing?.id || `calendar:${pedHash(sourceKey)}`,
+          mirrorSource: calendarMirrorSource,
+          sourceKey,
+          name: event.title || "Appuntamento",
+          projectId: project.id,
+          members,
+          start,
+          end,
+          hasEnd: Boolean(end && start && end !== start),
+          status: existing?.status || status,
+          done: isDoneStatus(existing?.status || status),
+          notes: existing?.notes || "",
+          subtasks: existing?.subtasks || []
+        };
+      });
+
+      const manualOoo = data.ooo.filter((entry) => entry.mirrorSource !== calendarMirrorSource);
+      const existingCalendarOoo = new Map(data.ooo
+        .filter((entry) => entry.mirrorSource === calendarMirrorSource)
+        .map((entry) => [entry.sourceKey, entry]));
+      const importedOoo = events
+        .filter((event) => /^(assenza|fuori sede|out of office|ooo)$/i.test(String(event.title || "").trim()))
+        .flatMap((event) => {
+          const member = ensureCalendarMember(event.person).name;
+          const start = calendarDate(event.start || event.startDate);
+          const end = calendarDate(event.endInclusive || event.endDateInclusive || event.start || event.startDate);
+          if (!member || !start) return [];
+          const duplicate = manualOoo.some((entry) => sameName(entry.member, member) && entry.start === start && entry.end === end);
+          if (duplicate) return [];
+          const sourceKey = calendarSourceKey(event);
+          const existing = existingCalendarOoo.get(sourceKey);
+          return [{
+            ...(existing || {}),
+            id: existing?.id || `calendar-ooo:${pedHash(sourceKey)}`,
+            mirrorSource: calendarMirrorSource,
+            sourceKey,
+            member,
+            start,
+            end,
+            hasEnd: end !== start
+          }];
+        });
+      const manualTasks = data.tasks.filter((task) => task.mirrorSource !== calendarMirrorSource);
+      const nextData = normalizeData({
+        ...data,
+        tasks: [...manualTasks, ...importedTasks],
+        ooo: [...manualOoo, ...importedOoo]
+      });
+      if (dataSignature(nextData) !== dataSignature(data)) {
+        saveBackup("Prima della sincronizzazione Calendar", data);
+        data = nextData;
+        saveData("Sincronizza Calendar");
+        render();
+      }
+    }
+
+    async function syncCalendarMirror() {
+      if (calendarSyncPromise) return calendarSyncPromise;
+      calendarSyncPromise = (async () => {
+        try {
+          if (window.NOKU_CALENDAR_FEED?.events) {
+            syncCalendarFeed(window.NOKU_CALENDAR_FEED);
+            return;
+          }
+          const response = await fetch(`${calendarSyncUrl}?_=${Date.now()}`, { cache: "no-store" });
+          if (!response.ok) throw new Error(`Feed Calendar non disponibile (${response.status})`);
+          syncCalendarFeed(await response.json());
+        } catch (error) {
+          console.warn("Calendar mirror sync skipped", error);
+        } finally {
+          calendarSyncPromise = null;
+        }
+      })();
+      return calendarSyncPromise;
+    }
+
+    function startCalendarSyncSchedule() {
+      if (calendarSyncTimer) window.clearInterval(calendarSyncTimer);
+      calendarSyncTimer = window.setInterval(() => syncCalendarMirror(), calendarSyncIntervalMs);
     }
 
     function normalizeProject(project, index = 0) {
@@ -2026,7 +2216,7 @@
                 sourceSheet: sheetName,
                 sourceKey: item.sourceKey,
                 manualStatusOverride: keepManualStatus || Boolean(existing?.manualStatusOverride),
-                name: `PUBBLICARE ${item.title}`,
+                name: `📅 PUBBLICARE ${item.title}`,
                 projectId: project.id,
                 members: [assignedMember.name],
                 start: item.date,
@@ -4014,9 +4204,15 @@
 
     async function bootApp() {
       try {
-        await startRemoteSync();
+        try {
+          await startRemoteSync();
+        } catch (remoteError) {
+          console.warn("Avvio remoto non disponibile: continuo con le sincronizzazioni locali", remoteError);
+        }
         await syncPedMirror();
+        await syncCalendarMirror();
         startPedSyncSchedule();
+        startCalendarSyncSchedule();
         if (!hasRendered) {
           render();
         }
@@ -4034,9 +4230,15 @@
       }
     }
 
-    window.addEventListener("focus", () => syncPedMirror());
+    window.addEventListener("focus", () => {
+      syncPedMirror();
+      syncCalendarMirror();
+    });
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") syncPedMirror();
+      if (document.visibilityState === "visible") {
+        syncPedMirror();
+        syncCalendarMirror();
+      }
     });
 
     bootApp();
