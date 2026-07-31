@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v60";
+      const appVersion = "v62";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -1564,7 +1564,7 @@
           end: task.hasEnd === false ? (task.start || iso(today)) : (task.end || task.start || iso(today)),
           hasEnd: task.hasEnd === true || Boolean(task.end && task.start && task.end !== task.start),
           status: taskStatus,
-          done: isDoneStatus(taskStatus),
+          done: Boolean(task.done) || isDoneStatus(taskStatus),
           notes: task.notes || "",
           subtasks: Array.isArray(task.subtasks) ? task.subtasks.map((subtask) => {
             let subtaskStart = subtask.start || "";
@@ -1821,6 +1821,10 @@
       return /^(done|fatto|fatti|fatta|fatte|completat[oaie]?|chius[oaie]?)$/i.test(String(statusName || "").trim());
     }
 
+    function isTaskDone(task) {
+      return Boolean(task?.done) || isDoneStatus(task?.status);
+    }
+
     function safeStorageGet(key) {
       try {
         return localStorage.getItem(key);
@@ -2026,7 +2030,7 @@
             end,
             hasEnd: Boolean(end && start && end !== start),
             status,
-            done: isDoneStatus(status),
+            done: isDoneStatus(sourceStatus) || isDoneStatus(status),
             notes: task.info || task.notes || existing?.notes || "",
             subtasks: []
           };
@@ -2544,7 +2548,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v60",
+        version: window.NOKU_APP_VERSION || "v62",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2852,7 +2856,7 @@
     function renderFilters() {
       const current = viewFilter.value || "overview";
       const counts = data.members.map((member) => {
-        const count = data.tasks.filter((task) => (task.members || []).includes(member.name)).length;
+        const count = data.tasks.filter((task) => (task.members || []).includes(member.name) && !isTaskDone(task)).length;
         return `<option value="member:${escapeAttr(member.name)}">${escapeHtml(member.name)} (${count})</option>`;
       }).join("");
       viewFilter.innerHTML = `<option value="overview">Overview</option>${counts}`;
@@ -3001,7 +3005,7 @@
         const lane = currentLaneLayout.taskLanes.get(task.id) || 0;
         const top = rows.findIndex((item) => item.id === task.projectId) * rowHeight() + 8 + (lane * 32);
         const width = daysBetween(parseDate(task.start), parseDate(task.end)) * dayWidth() - 16;
-        const done = isDoneStatus(task.status) ? " is-done" : "";
+        const done = isTaskDone(task) ? " is-done" : "";
         const subtasks = task.subtasks || [];
         const completedSubtasks = subtasks.filter((subtask) => subtask.done).length;
         const subtaskBadge = subtasks.length ? `<span class="bar-subtasks">${completedSubtasks}/${subtasks.length}</span>` : "";
