@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v81";
+      const appVersion = "v82";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -2718,7 +2718,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v81",
+        version: window.NOKU_APP_VERSION || "v82",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -2923,6 +2923,31 @@
         const candidates = [0, ...blockers.map((other) => other.top + other.height + gap)].sort((a, b) => a - b);
         return candidates.find((candidate) => !blockers.some((other) => overlapsAt(candidate, item, other))) ?? 0;
       };
+      const makeLayoutItem = (task) => {
+        const start = parseDate(task.start);
+        const end = parseDate(task.end || task.start);
+        return {
+          id: task.id,
+          type: task.type || "task",
+          startValue: stripTime(start).getTime(),
+          endValue: stripTime(end).getTime() + DAY_MS,
+          top: 0,
+          height: compactBarHeight(task, estimatedBarWidth(task)),
+          lane: 0
+        };
+      };
+      const layoutGroup = (items, topStart = 0) => {
+        const placed = [];
+        items
+          .sort((a, b) => a.startValue - b.startValue || a.endValue - b.endValue || a.id.localeCompare(b.id))
+          .forEach((item) => {
+            item.top = firstFreeTop(item, placed);
+            placed.push(item);
+          });
+        compactPlaced(placed);
+        if (topStart) placed.forEach((item) => { item.top += topStart; });
+        return placed;
+      };
       const compactPlaced = (placed) => {
         for (let pass = 0; pass < 20; pass += 1) {
           let changed = false;
@@ -2941,21 +2966,16 @@
       let maxLanes = 1;
       let totalHeight = 0;
       projects.forEach((project) => {
-        const placed = [];
-        tasks
+        const projectItems = tasks
           .filter((task) => task.projectId === project.id)
-          .sort((a, b) => parseDate(a.start) - parseDate(b.start) || parseDate(a.end) - parseDate(b.end))
-          .forEach((task) => {
-            const start = parseDate(task.start);
-            const end = parseDate(task.end || task.start);
-            const taskHeight = compactBarHeight(task, estimatedBarWidth(task));
-            const startValue = stripTime(start).getTime();
-            const endValue = stripTime(end).getTime() + DAY_MS;
-            const item = { id: task.id, startValue, endValue, top: 0, height: taskHeight, lane: 0 };
-            item.top = firstFreeTop(item, placed);
-            placed.push(item);
-          });
-        compactPlaced(placed);
+          .map(makeLayoutItem);
+        const mainItems = projectItems.filter((item) => item.type !== "subtask");
+        const subtaskItems = projectItems.filter((item) => item.type === "subtask");
+        const mainPlaced = layoutGroup(mainItems);
+        const mainBottom = mainPlaced.length ? Math.max(...mainPlaced.map((item) => item.top + item.height)) : 0;
+        const subtaskTop = mainPlaced.length && subtaskItems.length ? mainBottom + gap : 0;
+        const subtaskPlaced = layoutGroup(subtaskItems, subtaskTop);
+        const placed = [...mainPlaced, ...subtaskPlaced];
         const tops = [...new Set(placed.map((item) => item.top).sort((a, b) => a - b))];
         placed.forEach((item) => {
           item.lane = tops.indexOf(item.top);
