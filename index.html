@@ -3148,7 +3148,22 @@
       return Math.max(0, ...widths);
     }
 
+    function currentViewportAnchorDate() {
+      if (!currentTimelineRange || !board.clientWidth) return null;
+      const visibleWidth = Math.max(1, board.clientWidth - sidebarWidth());
+      const offset = Math.round((board.scrollLeft + visibleWidth / 2) / Math.max(1, dayWidth()));
+      return addDays(currentTimelineRange.start, offset);
+    }
+
+    function restoreViewportAnchor(date) {
+      if (!date || !currentTimelineRange) return;
+      const visibleWidth = Math.max(1, board.clientWidth - sidebarWidth());
+      const left = Math.max(0, diffDays(date, currentTimelineRange.start) * dayWidth() - visibleWidth / 2);
+      board.scrollTo({ left, behavior: "auto" });
+    }
+
     function render() {
+      const viewportAnchorDate = currentViewportAnchorDate();
       hideTaskTooltip();
       applyZoom();
       renderFilters();
@@ -3162,6 +3177,11 @@
       hasRendered = true;
       appRoot.classList.remove("is-booting");
       bootScreen?.remove();
+      if (startupAutoScroll) {
+        scheduleScrollToToday();
+      } else if (viewportAnchorDate) {
+        requestAnimationFrame(() => restoreViewportAnchor(viewportAnchorDate));
+      }
       requestAnimationFrame(updateScrollHint);
       requestAnimationFrame(updateCurrentMonthIndicator);
     }
