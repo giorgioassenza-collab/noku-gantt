@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v83";
+      const appVersion = "v84";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -189,6 +189,11 @@
     .text-btn.warn {
       background: #fff1f1;
       color: #8c1111;
+    }
+
+    .text-btn.is-active {
+      background: var(--accent);
+      color: var(--ink);
     }
 
     .select {
@@ -1181,6 +1186,7 @@
       <div class="tool-group" aria-label="Controlli Gantt">
         <span class="sync-status" id="syncStatus" title="Stato salvataggio">Locale</span>
         <select class="select" id="viewFilter" title="Vista"></select>
+        <button class="text-btn" id="overdueBtn" type="button">In ritardo</button>
         <button class="icon-btn" id="undoBtn" title="Annulla ultima operazione" disabled>↶</button>
         <button class="text-btn" id="historyBtn" type="button">Cronologia</button>
         <button class="icon-btn" id="zoomOut" title="Riduci zoom">-</button>
@@ -1464,6 +1470,7 @@
     const gridEl = document.getElementById("grid");
     const weekendsEl = document.getElementById("weekends");
     const viewFilter = document.getElementById("viewFilter");
+    const overdueBtn = document.getElementById("overdueBtn");
     const contextMenu = document.getElementById("contextMenu");
     const subtaskList = document.getElementById("subtaskList");
     const undoBtn = document.getElementById("undoBtn");
@@ -1494,6 +1501,7 @@
     let calendarSyncPromise = null;
     let calendarSyncTimer = null;
     let activeTooltipBar = null;
+    let overdueOnly = false;
 
     function taskSeed(name, projectId, member, startOffset, endOffset, status) {
       return {
@@ -1888,6 +1896,16 @@
       const start = parseDate(task.start);
       const end = parseDate(task.end || task.start);
       return start <= today && end >= today;
+    }
+
+    function isTaskOverdue(task) {
+      if (!task?.start) return false;
+      const end = parseDate(task.end || task.start);
+      return end < today && isTaskCountable(task);
+    }
+
+    function isTaskRelevantForMemberCount(task) {
+      return isTaskCountable(task) && (isTaskActiveToday(task) || isTaskOverdue(task));
     }
 
     function overlapsDateRange(item, startRange, endRange) {
@@ -2718,7 +2736,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v83",
+        version: window.NOKU_APP_VERSION || "v84",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -3006,13 +3024,18 @@
 
     function visibleProjects() {
       const member = selectedMember();
-      if (!member) return data.projects;
+      if (!member) {
+        return overdueOnly
+          ? data.projects.filter((project) => data.tasks.some((task) => task.projectId === project.id && isTaskOverdue(task)))
+          : data.projects;
+      }
       return data.projects.filter((project) => projectHasRecentMemberActivity(project.id, member));
     }
 
     function projectHasRecentMemberActivity(projectId, member) {
       return data.tasks.some((task) => {
         if (task.projectId !== projectId) return false;
+        if (overdueOnly) return (task.members || []).includes(member) && isTaskOverdue(task);
         if ((task.members || []).includes(member) && isInMemberWindow(task)) return true;
         return (task.subtasks || []).some((subtask) => {
           if (!subtask.start) return false;
@@ -3024,6 +3047,7 @@
     }
 
     function visibleOoo() {
+      if (overdueOnly) return [];
       const member = selectedMember();
       return member ? data.ooo.filter((entry) => entry.member === member && isInMemberWindow(entry)) : data.ooo;
     }
@@ -3051,10 +3075,15 @@
 
     function visibleTasks() {
       const member = selectedMember();
-      return member ? data.tasks.filter((task) => (task.members || []).includes(member) && isInMemberWindow(task)) : data.tasks;
+      let tasks = member
+        ? data.tasks.filter((task) => (task.members || []).includes(member) && (overdueOnly ? true : isInMemberWindow(task)))
+        : data.tasks;
+      if (overdueOnly) tasks = tasks.filter(isTaskOverdue);
+      return tasks;
     }
 
     function visibleSubtaskItems() {
+      if (overdueOnly) return [];
       const member = selectedMember();
       return data.tasks.flatMap((task) => (task.subtasks || [])
         .filter((subtask) => {
@@ -3187,14 +3216,26 @@
       document.getElementById("zoomLabel").textContent = `${Math.round(zoom * 100)}%`;
     }
 
+    function visibleOverdueCount() {
+      const member = selectedMember();
+      return data.tasks.filter((task) => {
+        if (member && !(task.members || []).includes(member)) return false;
+        return isTaskOverdue(task);
+      }).length;
+    }
+
     function renderFilters() {
       const current = viewFilter.value || "overview";
       const counts = data.members.map((member) => {
-        const count = data.tasks.filter((task) => (task.members || []).includes(member.name) && isTaskCountable(task) && isTaskActiveToday(task)).length;
+        const count = data.tasks.filter((task) => (task.members || []).includes(member.name) && isTaskRelevantForMemberCount(task)).length;
         return `<option value="member:${escapeAttr(member.name)}">${escapeHtml(member.name)} (${count})</option>`;
       }).join("");
       viewFilter.innerHTML = `<option value="overview">Overview</option>${counts}`;
       viewFilter.value = current === "overview" || data.members.some((member) => `member:${member.name}` === current) ? current : "overview";
+      const overdueCount = visibleOverdueCount();
+      overdueBtn.textContent = `In ritardo${overdueCount ? ` (${overdueCount})` : ""}`;
+      overdueBtn.classList.toggle("is-active", overdueOnly);
+      overdueBtn.setAttribute("aria-pressed", String(overdueOnly));
     }
 
     function renderRows() {
@@ -4347,7 +4388,21 @@
 
     viewFilter.addEventListener("change", () => {
       render();
-      scheduleScrollToToday();
+      if (overdueOnly) {
+        board.scrollTo({ left: 0, behavior: "auto" });
+      } else {
+        scheduleScrollToToday();
+      }
+    });
+
+    overdueBtn.addEventListener("click", () => {
+      overdueOnly = !overdueOnly;
+      render();
+      if (overdueOnly) {
+        board.scrollTo({ left: 0, behavior: "auto" });
+      } else {
+        scheduleScrollToToday();
+      }
     });
 
     barsEl.addEventListener("dblclick", (event) => {
