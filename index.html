@@ -2470,11 +2470,21 @@
           writeLocalSnapshot(data, history, dataRevision);
           scheduleScrollToToday();
         } else {
-          if (!pendingRemoteSave) {
-            const remoteRevision = Number(snapshot.data()?.revision || 0);
-            if (remoteRevision > dataRevision) {
-              applyRemoteDocument(snapshot.data(), true);
-            } else if (dataRevision > remoteRevision) {
+          const remoteRevision = Number(snapshot.data()?.revision || 0);
+          const pendingRevision = Number(pendingLocalSnapshot?.revision || 0);
+          const localRevision = Math.max(dataRevision, pendingRevision);
+          if (remoteRevision > localRevision) {
+            // Una sincronizzazione esterna (Calendar) più recente deve vincere
+            // anche su un vecchio salvataggio locale rimasto in sospeso.
+            pendingLocalSnapshot = null;
+            pendingRemoteSave = false;
+            try {
+              localStorage.removeItem(pendingSaveKey);
+            } catch (error) {
+              console.warn(error);
+            }
+            applyRemoteDocument(snapshot.data(), true);
+          } else if (!pendingRemoteSave && dataRevision > remoteRevision) {
               pendingRemoteSave = true;
               pendingLocalSnapshot = {
                 data: cleanForRemote(normalizeData(data)),
@@ -2482,7 +2492,6 @@
                 revision: dataRevision
               };
               storePendingLocalSnapshot(pendingLocalSnapshot);
-            }
           }
         }
         unsubscribeBoard = onSnapshot(boardRef, (remoteSnapshot) => {
