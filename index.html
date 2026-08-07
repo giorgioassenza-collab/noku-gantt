@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v95";
+      const appVersion = "v96";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -2572,20 +2572,21 @@
         // esplicitamente all'avvio: il listener resta utile per gli aggiornamenti,
         // ma non deve essere l'unico modo con cui le call arrivano a schermo.
         try {
-          const calendarSnapshot = await withTimeout(
-            getDoc(calendarBoardRef),
-            8000,
-            "Lettura feed Calendar separato non riuscita"
-          );
-          if (calendarSnapshot.exists()) {
-            const calendarData = calendarSnapshot.data()?.data;
-            if (calendarData && Array.isArray(calendarData.tasks)) {
-              lastCalendarRemoteData = calendarData;
-              data = preserveRemoteCalendarMirror(data, calendarData);
-              lastSavedData = cloneData(data);
-              writeLocalSnapshot(data, history, dataRevision);
-              render();
-            }
+          const idToken = await auth.currentUser?.getIdToken();
+          if (!idToken) throw new Error("Token Firebase non disponibile");
+          const calendarResponse = await withTimeout(fetch(
+            `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/boards/${remoteBoardId}-calendar`,
+            { headers: { Authorization: `Bearer ${idToken}` } }
+          ), 8000, "Lettura REST feed Calendar separato non riuscita");
+          if (!calendarResponse.ok) throw new Error(`Feed Calendar separato HTTP ${calendarResponse.status}`);
+          const calendarDocument = await calendarResponse.json();
+          const calendarData = decodeFirestoreValue(calendarDocument.fields?.data);
+          if (calendarData && Array.isArray(calendarData.tasks)) {
+            lastCalendarRemoteData = calendarData;
+            data = preserveRemoteCalendarMirror(data, calendarData);
+            lastSavedData = cloneData(data);
+            writeLocalSnapshot(data, history, dataRevision);
+            render();
           }
         } catch (calendarError) {
           console.error("Calendar board initial load failed", calendarError);
@@ -2705,6 +2706,22 @@
           ...remote.ooo.filter((entry) => entry.mirrorSource === calendarMirrorSource)
         ]
       });
+    }
+
+    function decodeFirestoreValue(value = {}) {
+      if (Object.prototype.hasOwnProperty.call(value, "stringValue")) return value.stringValue;
+      if (Object.prototype.hasOwnProperty.call(value, "integerValue")) return Number(value.integerValue);
+      if (Object.prototype.hasOwnProperty.call(value, "doubleValue")) return Number(value.doubleValue);
+      if (Object.prototype.hasOwnProperty.call(value, "booleanValue")) return value.booleanValue;
+      if (Object.prototype.hasOwnProperty.call(value, "nullValue")) return null;
+      if (Object.prototype.hasOwnProperty.call(value, "timestampValue")) return value.timestampValue;
+      if (value.arrayValue) return (value.arrayValue.values || []).map(decodeFirestoreValue);
+      if (value.mapValue) {
+        return Object.fromEntries(Object.entries(value.mapValue.fields || {}).map(
+          ([key, item]) => [key, decodeFirestoreValue(item)]
+        ));
+      }
+      return null;
     }
 
     function queueRemoteSave(label = "Modifica", forcedSnapshot = null) {
@@ -2912,7 +2929,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v95",
+        version: window.NOKU_APP_VERSION || "v96",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
