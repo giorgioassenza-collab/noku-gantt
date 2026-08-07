@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v90";
+      const appVersion = "v91";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -2526,9 +2526,21 @@
       const remoteData = remoteDoc?.data;
       if (!remoteData || !Array.isArray(remoteData.tasks)) return;
       if (pendingLocalSnapshot) {
-        const remoteSignature = dataSignature(normalizeData(remoteData));
-        const pendingSignature = dataSignature(normalizeData(pendingLocalSnapshot.data));
-        if (remoteRevision >= pendingLocalSnapshot.revision && remoteSignature === pendingSignature) {
+        if (remoteRevision > Number(pendingLocalSnapshot.revision || 0)) {
+          // Calendar usa una revisione protetta: se è più recente deve
+          // aggiornare anche le schede già aperte, senza restare bloccato da
+          // un vecchio salvataggio locale in sospeso.
+          pendingLocalSnapshot = null;
+          pendingRemoteSave = false;
+          try {
+            localStorage.removeItem(pendingSaveKey);
+          } catch (error) {
+            console.warn(error);
+          }
+        } else {
+          const remoteSignature = dataSignature(normalizeData(remoteData));
+          const pendingSignature = dataSignature(normalizeData(pendingLocalSnapshot.data));
+          if (remoteRevision >= pendingLocalSnapshot.revision && remoteSignature === pendingSignature) {
           if (!pendingLocalSnapshot.confirmedAt) {
             pendingLocalSnapshot.confirmedAt = Date.now();
             storePendingLocalSnapshot(pendingLocalSnapshot);
@@ -2536,8 +2548,9 @@
           if (Date.now() - pendingLocalSnapshot.confirmedAt > 60 * 1000) {
             clearPendingLocalSnapshot(pendingLocalSnapshot.revision);
           }
-        } else if (!force) {
-          return;
+          } else if (!force) {
+            return;
+          }
         }
       }
       if (!force && applyingRemoteUpdate) return;
@@ -4917,5 +4930,3 @@
   </script>
 </body>
 </html>
-
-<!-- Pages deploy retry 2026-08-07 -->
