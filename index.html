@@ -2623,11 +2623,20 @@
     function preserveRemoteCalendarMirror(localData, remoteData) {
       const local = normalizeData(localData);
       const remote = normalizeData(remoteData);
+      const remoteCalendarTasks = remote.tasks.filter((task) => task.mirrorSource === calendarMirrorSource);
+      const calendarProjectIds = new Set(remoteCalendarTasks.map((task) => task.projectId).filter(Boolean));
+      const localProjectIds = new Set(local.projects.map((project) => project.id));
       return normalizeData({
         ...local,
+        projects: [
+          ...local.projects,
+          ...remote.projects.filter((project) =>
+            calendarProjectIds.has(project.id) && !localProjectIds.has(project.id)
+          )
+        ],
         tasks: [
           ...local.tasks.filter((task) => task.mirrorSource !== calendarMirrorSource),
-          ...remote.tasks.filter((task) => task.mirrorSource === calendarMirrorSource)
+          ...remoteCalendarTasks
         ],
         ooo: [
           ...local.ooo.filter((entry) => entry.mirrorSource !== calendarMirrorSource),
