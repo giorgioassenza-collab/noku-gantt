@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARwSURBVFhH7VdrTJNnFK4ZAmEd0JZyK5cWukqBIgVEELCTS1sKwxIYFyVjqMvQxOjGYNNkMZtMYhZ/LGYDokw3SBYXF4yamZnhTAYmc86ZTDJwlEALrQFWBnLz17OcU8ncVtCYBf1Bk5PzvX3Pe87zPufy5RPI5bJBhSLMKZfLVlQexBwUyOVhM1FREVAowldUKCbFFrjQhNNiRcUVU+ZcBbAK4NkDEBkpQ0RE6D+M3a0f/o/OhIZKWf870FLiFoBC4XIeEiKFTBbERi7ngbwfFhYMf38h29D/9Ex20dGRSE5ORHS0/LFBuAUgkfhh587XcOPGT0hKSoBE4ouUFC2uXv0eWq2GgbW1ncDQ0BCGh4fR0dHOYOLi1vE6O1uHoCDJf4K5E7cAfH19UF//FujX3v45PDwEyMhIw9zcHDQaNQccHx9HdXUVtm+vgM1mw4UL56FUyuF0/gG9PhtisS/8/J5HeHgIM0Sa/ItEQmbyb7bdAKCDDQ11mJycxPz8PHS6DGg0sbDb7SgoMGBq6k+YzS/D03MNvLyeQ06ODrOzszCZDLDZrNi8eRPU6hfR3PwJA29q+hBabQIz19j4AQyGXISEBCwP4NCh95jyS5e+wbVrPVCrVUxvTc2rcDjsWL8+jm9C9aBSRcNuH8WuXTUYHLRApYrC6dOfobe3F/HxMbh/fwG5uS8xKxMTE9i3by9EohceDaCnpxsbNmg5FcTI7du/YseOamaCAFDhPQyA9iwWCzo6vuAz+fl6LsyxsTFs2ZLFtWWxDGD37jcYzCMB3Lr1CwQCATuknN+504/CwnxOgcmkh7e3B3x8PJGVtQkzMzOcntHRUXR3/wCr1Ypjxz7it934+BjS0lKwdu0aDAz8jj17apcHQEV4+PD76Ov7DUKhN2Jj12FhYYFvRbnt7PwaVuswzOZCFBQY0d/fh66u75j66ekptqHidDqdzNS9e9OorX0dBw++yz4oVcumgNDt378XFy+e53YSCr1w4MA7TB91AVX0mTNfwuFw4O5dB86d6+QOiIlR4vr1H5GengqlUoGbN39GZmYajh5twsjICK5c6WJ2KivLEBDgvzQA0lRgUqk/pFIRDxXKNT0TIDpMmnqfKCZNtoGBrv3AQPGDtRhBQWLOPQGkdqT0kv2ybUjFRcgrKl6B0ZjH9DU0vM3tuHVrIUpKzNxaKSmJfGsqvtLSYmzbVg6jMRfl5aWcGoMhh2cFdQINqczMdFRVVfKaWFwSAN2QDra0fMrS2tqM48c/xsmTJ1ifOtWGI0cauc8TEmJRX1+Hs2e/4rppbW1hyi9f/pbbmCZmcXERAydfVD+0JnaWBEDoyDHdkIYLDRrSOl0m34pGbVlZCerq3kRwcAASEzW8l5qaxEOIBg0NoLy8bOj1Odi4MRnx8WpmqajIxK1NKV0SAGkCQamgnFIQ0jTJFnNMNpRXyic5W3xxLdqQDg6W8DPtkz+qITpL62Vr4HHE3ev6SeSJAfxfsgpgFcCzBODpf5w+1c/zvwDUaFkOiJruIwAAAABJRU5ErkJggg==">
   <script>
     (() => {
-      const appVersion = "v91";
+      const appVersion = "v92";
       window.NOKU_APP_VERSION = appVersion;
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
@@ -1405,6 +1405,7 @@
     const backupKey = "noku-gantt-backups-v1";
     const revisionKey = "noku-gantt-revision-v1";
     const pendingSaveKey = "noku-gantt-pending-save-v1";
+    const protectedStatusKey = "noku-gantt-protected-status-v1";
     const remoteBoardId = "noku-gantt";
     const otacosBoardId = "default";
     const otacosMirrorSource = "otacos";
@@ -1955,6 +1956,53 @@
       return JSON.stringify(value);
     }
 
+    function loadProtectedStatusOverrides() {
+      try {
+        const saved = JSON.parse(safeStorageGet(protectedStatusKey) || "{}");
+        const cutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        return Object.fromEntries(Object.entries(saved || {}).filter(([, entry]) => entry?.time >= cutoff));
+      } catch (error) {
+        console.warn(error);
+        return {};
+      }
+    }
+
+    function saveProtectedStatusOverrides(overrides) {
+      safeStorageSet(protectedStatusKey, JSON.stringify(overrides || {}));
+    }
+
+    function protectTaskStatus(task) {
+      if (!task?.id) return;
+      const overrides = loadProtectedStatusOverrides();
+      overrides[task.id] = {
+        status: task.status,
+        done: Boolean(task.done) || isDoneStatus(task.status),
+        manualStatusOverride: true,
+        time: Date.now()
+      };
+      saveProtectedStatusOverrides(overrides);
+    }
+
+    function applyProtectedTaskStatuses(source) {
+      const normalized = normalizeData(source);
+      const overrides = loadProtectedStatusOverrides();
+      let changed = false;
+      normalized.tasks = normalized.tasks.map((task) => {
+        const override = overrides[task.id];
+        if (!override || !normalized.statuses.some((status) => status.name === override.status)) return task;
+        const nextDone = Boolean(override.done) || isDoneStatus(override.status);
+        if (task.status === override.status && Boolean(task.done) === nextDone && task.manualStatusOverride === true) return task;
+        changed = true;
+        return {
+          ...task,
+          status: override.status,
+          done: nextDone,
+          manualStatusOverride: true
+        };
+      });
+      return { data: normalized, changed };
+    }
+
     function loadHistory() {
       try {
         const saved = JSON.parse(safeStorageGet(historyKey));
@@ -2017,13 +2065,13 @@
     }
 
     function writeLocalSnapshot(snapshotData = data, snapshotHistory = history, revision = dataRevision) {
-      let normalized = normalizeData(snapshotData);
+      let normalized = applyProtectedTaskStatuses(snapshotData).data;
       if (pendingLocalSnapshot) {
         const pendingAge = Date.now() - Number(pendingLocalSnapshot.confirmedAt || pendingLocalSnapshot.savedAt || Date.now());
         const incomingSignature = dataSignature(normalized);
-        const pendingSignature = dataSignature(normalizeData(pendingLocalSnapshot.data));
+        const pendingSignature = dataSignature(applyProtectedTaskStatuses(pendingLocalSnapshot.data).data);
         if (pendingAge < 60 * 1000 && incomingSignature !== pendingSignature) {
-          normalized = normalizeData(pendingLocalSnapshot.data);
+          normalized = applyProtectedTaskStatuses(pendingLocalSnapshot.data).data;
           snapshotHistory = pendingLocalSnapshot.history || snapshotHistory;
           revision = Math.max(Number(revision || 0), Number(pendingLocalSnapshot.revision || 0));
         }
@@ -2191,7 +2239,7 @@
         });
       const manualTasks = data.tasks.filter((task) => task.mirrorSource !== otacosMirrorSource);
       data.tasks = [...manualTasks, ...mirrorTasks];
-      data = normalizeData(data);
+      data = applyProtectedTaskStatuses(data).data;
       lastSavedData = cloneData(data);
       writeLocalSnapshot(data, history, dataRevision);
       render();
@@ -2401,7 +2449,7 @@
             });
           });
           const manualTasks = data.tasks.filter((task) => task.mirrorSource !== pedMirrorSource);
-          const nextData = normalizeData({ ...data, tasks: [...manualTasks, ...mirrorTasks] });
+          const nextData = applyProtectedTaskStatuses({ ...data, tasks: [...manualTasks, ...mirrorTasks] }).data;
           if (dataSignature(nextData) !== dataSignature(data)) {
             saveBackup("Prima della sincronizzazione PED", data);
             data = nextData;
@@ -2555,7 +2603,8 @@
       }
       if (!force && applyingRemoteUpdate) return;
       if (!force && remoteRevision <= dataRevision) return;
-      data = normalizeData(remoteData);
+      const protectedRemote = applyProtectedTaskStatuses(remoteData);
+      data = protectedRemote.data;
       history = Array.isArray(remoteDoc.history) ? remoteDoc.history.slice(0, 10) : history;
       dataRevision = remoteRevision;
       lastSavedData = cloneData(data);
@@ -2568,6 +2617,7 @@
       }
       if (force) scheduleScrollToToday();
       setSyncMessage("Online");
+      if (protectedRemote.changed) queueRemoteSave("Proteggi status task");
     }
 
     function preserveRemoteCalendarMirror(localData, remoteData) {
@@ -2589,7 +2639,7 @@
     function queueRemoteSave(label = "Modifica", forcedSnapshot = null) {
       const protectedPending = pendingLocalSnapshot && !forcedSnapshot && /^Sincronizza/.test(label);
       const sourceSnapshot = forcedSnapshot || (protectedPending ? pendingLocalSnapshot : null);
-      let snapshotData = sourceSnapshot?.data || cleanForRemote(normalizeData(data));
+      let snapshotData = cleanForRemote(applyProtectedTaskStatuses(sourceSnapshot?.data || data).data);
       const snapshotHistory = sourceSnapshot?.history || cleanForRemote(history.slice(0, 10));
       const nextRevision = sourceSnapshot?.revision || Math.max(Date.now(), dataRevision + 1);
       dataRevision = Math.max(dataRevision, nextRevision);
@@ -2791,7 +2841,7 @@
       const payload = {
         app: "noku-gantt",
         exportedAt: new Date().toISOString(),
-        version: window.NOKU_APP_VERSION || "v89",
+        version: window.NOKU_APP_VERSION || "v92",
         data: normalizeData(cloneData(data)),
         history: history.slice(0, 10),
         backups: loadBackups().slice(0, 20)
@@ -3994,6 +4044,7 @@
       if (task.mirrorSource) {
         task.manualStatusOverride = true;
       }
+      protectTaskStatus(task);
       saveData("Cambia status task");
       render();
     }
@@ -4457,6 +4508,9 @@
         notes: document.getElementById("taskNotes").value.trim(),
         subtasks: collectSubtasks()
       };
+      if (existingTask && existingTask.status !== next.status) {
+        protectTaskStatus(next);
+      }
       data.tasks = data.tasks.some((task) => task.id === id) ? data.tasks.map((task) => task.id === id ? next : task) : [...data.tasks, next];
       saveData(document.getElementById("taskId").value ? "Modifica task" : "Crea task");
       closeModals();
